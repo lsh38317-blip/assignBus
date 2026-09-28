@@ -3,6 +3,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v40] 참석내역조회 탭: 체크하면 즉시 편집(일괄수정 버튼 제거), 해제 시 원래 값 복원, 행별 [수정] 제거·[삭제]만 유지 -->
+<!-- [v39] 참석내역조회 탭: 여러 행 선택 후 일괄수정(선택 행 동시 편집→일괄저장)·일괄삭제 -->
+<!-- [v38] CSV 일괄등록: 등록 집회 콤보·양식 다운로드·파일 선택·파일명을 한 줄로 배치(좁은 화면은 줄바꿈) -->
+<!-- [v37] 본문 높이 창 기준(전 메뉴), 현황표 표 안 가로·세로 스크롤 + 머리행·왼쪽 3칸·관리칸 고정, 보기모드 안내글자 숨김, 건수 표 위 이동, 조회 후 스크롤 초기화 -->
+<!-- [v36] 참석정보 등록 탭 3개(참석자 개별등록 / 참석자 일괄등록 / 참석내역조회), 참석내역조회 탭의 인도자는 일반 글자 -->
+<!-- [v35] 참석정보 등록 화면 탭 분리(참석개별등록 / 참석내역조회 및 일괄등록) + CSV 일괄등록(구역·인도자·대상자·관계) -->
+<!-- [v34] 하루이상·5일이상 피벗표에서 참석 0명 구역·0명 교구 소계 제외, 전체 0명이면 안내문구 표시 -->
+<!-- [v33] 5일이상 메뉴를 하루이상과 동일한 피벗표로 전환(집회별 5일이상 기준일수로 판정) -->
 <!-- [v32] GitHub Pages 등 웹서버에서 열 때 실행기가 페이지 원본을 재다운로드하면서 코드 속 "<x-dc>" 문구를 화면 시작점으로 잘못 인식하는 문제 방지 — 재다운로드 비활성화 -->
 <script>window.__resources = window.__resources || {};</script>
 <script>/**
@@ -390,7 +398,8 @@ h1,h2{font-family:'Noto Sans KR',sans-serif;margin:0;font-weight:700}
 .sub-btn.active{color:#111b34;background:#eef1f8;font-weight:600}
 .side-foot{margin-top:auto;padding:14px 20px 0;border-top:1px solid #263258;font-size:11.5px;color:#5b6690}
 
-.main{flex:1 1 auto;min-width:0;padding:26px 32px 44px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;height:900px;background:#eef0f3}
+.main{flex:1 1 auto;min-width:0;padding:26px 32px 44px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;height:100%;background:#eef0f3} /* [v37] 900px 고정 → 창 높이 기준 */
+.main>*{flex-shrink:0} /* [v37] 본문 스크롤 시 패널이 눌려 잘리지 않도록 */
 .headline{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .headline h1{font-size:21px}
 .headline p{margin:5px 0 0;color:#6b7280;font-size:13px}
@@ -467,6 +476,51 @@ tr.selected td:first-child{box-shadow:inset 3px 0 0 #2f5fd1}
 .cell-input{width:100%;min-width:92px;border:1px solid #e5e7eb;border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;background:#fff;color:#1f2430}
 .btn-link{background:none;border:0;color:#2f5fd1;font-size:12px;font-weight:600;cursor:pointer;padding:2px 4px}
 .btn-link.danger{color:#c0392b}
+/* [v35] 참석정보 등록 탭 + CSV 일괄등록 */
+.tabs{display:flex;gap:4px;border-bottom:1px solid #d9dde5}
+.tab-btn{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 16px;font:inherit;font-size:14px;font-weight:600;color:#6b7280;cursor:pointer}
+.tab-btn.active{color:#111b34;border-bottom-color:#2f5fd1}
+.csv-row{display:flex;flex-wrap:nowrap;gap:8px;align-items:center}
+.csv-row>.btn{flex:0 0 auto}
+/* [v38] 한 줄 배치 */
+.csv-label{font-size:12.5px;font-weight:600;color:#6b7280;margin-right:2px;white-space:nowrap;flex:0 0 auto}
+.csv-meeting{flex:0 1 280px;min-width:180px;max-width:100%}
+.csv-file{font-size:12.5px;color:#6b7280;flex:1 1 60px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.csv-sum{font-size:13px;font-weight:600;margin:16px 0 8px}
+.csv-sum .ok{color:#1a7a4c}.csv-sum .ng{color:#c0392b}
+.csv-progress{font-size:12.5px;color:#2f5fd1;font-weight:600}
+input.csv-hidden{display:none}
+/* [v37] 현황표 스크롤 영역 + 고정 칸 */
+.list-count{font-size:12.5px;color:#6b7280;padding:10px 18px 8px}
+.list-count b{color:#111b34}
+/* [v39] 일괄 선택·수정·삭제 */
+.bulk-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 18px 10px}
+.bulk-bar .bulk-cnt{font-size:13px;font-weight:600;color:#111b34;margin-right:4px}
+.bulk-bar .btn{padding:6px 10px;font-size:12.5px}
+.bulk-bar .btn:disabled{opacity:.45;cursor:not-allowed}
+.bulk-bar .btn.danger{color:#c0392b;border-color:#f0c4be}
+.bulk-progress{font-size:12.5px;color:#2f5fd1;font-weight:600}
+.bulk-tag{font-size:11.5px;font-weight:600;color:#6b7280}
+.bulk-tag.changed{color:#2f5fd1}
+.bulk-cnt .chg{color:#2f5fd1}
+.reg-table .c-chk{left:0;width:36px;min-width:36px;max-width:36px;text-align:center;padding-left:0;padding-right:0}
+.reg-table .c-chk input{width:15px;height:15px;cursor:pointer;vertical-align:middle}
+.reg-table.has-chk .c-zone{left:36px}
+.reg-table.has-chk .c-leader{left:92px}
+.reg-table.has-chk .c-target{left:196px}
+.reg-table tr.checked td{background:#eaf1ff}
+.list-scroll{overflow:auto;max-height:calc(100vh - 300px);min-height:240px;border-top:1px solid #e5e7eb}
+.reg-table{border-collapse:separate;border-spacing:0}
+.reg-table thead th{position:sticky;top:0;z-index:2;background:#f7f9fc}
+.reg-table tbody td{background:#fff}
+.reg-table tr.selected td{background:#eef1f8}
+.reg-table .stk{position:sticky;z-index:1;overflow:hidden;text-overflow:ellipsis}
+.reg-table thead th.stk{z-index:3}
+.reg-table .c-zone{left:0;width:56px;min-width:56px;max-width:56px}
+.reg-table .c-leader{left:56px;width:104px;min-width:104px;max-width:104px}
+.reg-table .c-target{left:160px;width:104px;min-width:104px;max-width:104px;box-shadow:inset -1px 0 0 #d9dde5}
+.reg-table .c-act{right:0;width:96px;min-width:96px;box-shadow:inset 1px 0 0 #d9dde5}
+.csv-preview{max-height:320px;overflow:auto;border:1px solid #e5e7eb;border-radius:8px}
 
 /* ===== 반응형(모바일) 레이아웃 ===== */
 .app-shell{width:100%;height:100vh;height:100dvh;display:flex;overflow:hidden;background:#efece3}
@@ -508,6 +562,12 @@ tr.selected td:first-child{box-shadow:inset 3px 0 0 #2f5fd1}
   .major-search-row{padding:0 14px 14px}
 
   .daybtn{width:34px;height:32px}
+  /* [v37] 모바일: 표 영역 높이만 제한, 왼쪽 고정은 구역 칸만 유지(좁은 화면 확보) */
+  .list-scroll{max-height:70vh}
+  /* [v38] 좁은 화면: 콤보는 한 줄 전체, 버튼·파일명은 다음 줄 */
+  .csv-row{flex-wrap:wrap}
+  .csv-meeting{flex:1 1 calc(100% - 70px);width:auto}
+  .reg-table .c-leader,.reg-table .c-target{position:static;box-shadow:none}
   table{font-size:12.5px}
 }
 
@@ -610,8 +670,9 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
     <sc-if value="{{isPivotView}}" hint-placeholder-val="{{false}}">
       <div class="headline">
         <div>
-          <h1>하루이상 참석자</h1>
-          <p>집회별·구역별로 하루 이상 참석한 인원을 집계합니다.</p>
+          <!-- [v33] 제목·설명을 메뉴별 판정규칙(PIVOT_RULES)에서 가져옴 -->
+          <h1>{{pivotHead.title}}</h1>
+          <p>{{pivotHead.desc}}</p>
         </div>
       </div>
 
@@ -633,7 +694,7 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
 
       <div class="panel pv-panel">
         <!-- [v29] 표 위 제목("참석현황 (하루이상)")·기준일 표시 제거 — 두 값은 CSV 첫 줄에만 사용 -->
-        <sc-if value="{{pivot.hasColumns}}" hint-placeholder-val="{{true}}">
+        <sc-if value="{{pivot.hasRows}}" hint-placeholder-val="{{true}}">
           <div class="pv-scroll">
             <sc-raw-table class="pv">
               <sc-raw-thead>
@@ -659,6 +720,10 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
             </sc-raw-table>
           </div>
           <div class="empty-note">파란 밑줄 숫자를 누르면 해당 구역·집회의 참석자 명단을 볼 수 있습니다.</div>
+        </sc-if>
+        <!-- [v34] 집회는 있으나 기준을 통과한 참석자가 없을 때 -->
+        <sc-if value="{{pivot.noRows}}" hint-placeholder-val="{{false}}">
+          <div class="empty-note" style="padding:34px 18px;text-align:center">조건에 해당하는 참석자가 없습니다.</div>
         </sc-if>
         <sc-if value="{{pivot.noColumns}}" hint-placeholder-val="{{false}}">
           <div class="empty-note">선택한 조건에 등록된 집회가 없습니다. 집회정보등록에서 집회를 먼저 등록하세요.</div>
@@ -789,6 +854,15 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
           <p>참석자의 출석 정보를 새로 등록합니다.</p>
         </div>
       </div>
+      <!-- [v35] 탭 -->
+      <div class="tabs">
+        <!-- [v36] 탭 3개 -->
+        <button class="tab-btn {{tabSingleCls}}" sc-camel-on-click="{{selectTabSingle}}">참석자 개별등록</button>
+        <button class="tab-btn {{tabBulkCls}}" sc-camel-on-click="{{selectTabBulk}}">참석자 일괄등록</button>
+        <button class="tab-btn {{tabQueryCls}}" sc-camel-on-click="{{selectTabQuery}}">참석내역조회</button>
+      </div>
+      <!-- [v35] 탭 ① 참석개별등록 — 기존 "참석자 등록" 패널 그대로 -->
+      <sc-if value="{{isTabSingle}}" hint-placeholder-val="{{true}}">
       <div class="panel">
         <div class="panel-head">
           <h2>참석자 등록</h2>
@@ -856,13 +930,62 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
           </div>
         </div>
       </div>
+      </sc-if>
 
+      <!-- [v35] 탭 ② CSV 일괄등록 / [v36] 참석자 일괄등록 탭은 CSV 일괄등록만 -->
+      <sc-if value="{{isTabBulk}}" hint-placeholder-val="{{false}}">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>CSV 일괄등록</h2>
+          <div class="sub">CSV 파일(구역, 인도자, 대상자, 관계)로 여러 대상자를 한 번에 등록합니다.</div>
+        </div>
+        <div class="panel-body">
+          <!-- [v38] 등록 집회 / 양식 다운로드 / 파일 선택 / 파일명 한 줄 -->
+          <div class="csv-row">
+            <span class="csv-label">등록 집회</span>
+            <sc-raw-select class="csv-meeting" value="{{csv.meetingId}}" sc-camel-on-change="{{csv.setMeetingId}}">
+              <option value="">집회를 선택하세요</option>
+              <sc-for list="{{meetingSelectOptions}}" as="opt" hint-placeholder-count="3">
+                <option value="{{opt.value}}">{{opt.label}}</option>
+              </sc-for>
+            </sc-raw-select>
+            <button class="btn" sc-camel-on-click="{{csv.downloadTemplate}}"><svg width="13" height="13" sc-camel-view-box="0 0 16 16" fill="none"><path d="M8 2v8m0 0-3-3m3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path><path d="M2.5 12v1.5A1.5 1.5 0 0 0 4 15h8a1.5 1.5 0 0 0 1.5-1.5V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg> 양식 다운로드</button>
+            <label class="btn">📄 파일 선택<input class="csv-hidden" type="file" accept=".csv,text/csv" sc-camel-on-change="{{csv.onFile}}"></label>
+            <span class="csv-file" title="{{csv.fileLabel}}">{{csv.fileLabel}}</span>
+          </div>
+          <sc-if value="{{csv.hasRows}}" hint-placeholder-val="{{false}}">
+            <div class="csv-sum">미리보기 · 전체 {{csv.total}}건 / <span class="ok">정상 {{csv.okCount}}건</span> / <span class="ng">오류 {{csv.ngCount}}건</span></div>
+            <div class="csv-preview">
+              <sc-raw-table>
+                <sc-raw-thead><sc-raw-tr><sc-raw-th>No</sc-raw-th><sc-raw-th>구역</sc-raw-th><sc-raw-th>인도자</sc-raw-th><sc-raw-th>대상자</sc-raw-th><sc-raw-th>관계</sc-raw-th><sc-raw-th>결과</sc-raw-th></sc-raw-tr></sc-raw-thead>
+                <sc-raw-tbody>
+                  <sc-for list="{{csv.rows}}" as="cr" hint-placeholder-count="3">
+                    <sc-raw-tr>
+                      <sc-raw-td>{{cr.no}}</sc-raw-td><sc-raw-td>{{cr.zone}}</sc-raw-td><sc-raw-td>{{cr.leader}}</sc-raw-td><sc-raw-td>{{cr.target}}</sc-raw-td><sc-raw-td>{{cr.relation}}</sc-raw-td>
+                      <sc-raw-td><span class="tag {{cr.tagCls}}">{{cr.result}}</span></sc-raw-td>
+                    </sc-raw-tr>
+                  </sc-for>
+                </sc-raw-tbody>
+              </sc-raw-table>
+            </div>
+            <div class="form-actions" style="align-items:center">
+              <span class="csv-progress">{{csv.progressText}}</span>
+              <button class="btn" sc-camel-on-click="{{csv.reset}}">취소</button>
+              <button class="btn primary" sc-camel-on-click="{{csv.register}}">정상 {{csv.okCount}}건 일괄등록</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- [v36] 현황표는 참석자 개별등록(①)·참석내역조회(③) 탭에서만 표시 -->
+      <sc-if value="{{showList}}" hint-placeholder-val="{{true}}">
       <div class="panel">
         <!-- [v31] 제목 오른쪽 집회 조회조건(전체 집회, 지난 집회 포함) + 조회 버튼 -->
         <div class="panel-head panel-head-row">
           <div>
             <h2>전도대상자 참석 · 구원 현황</h2>
-            <div class="sub">집회를 선택하고 조회하면 해당 집회의 참석 현황이 표시됩니다. 행의 "수정"을 누르면 그 행만 편집할 수 있고, "저장"을 눌러야 반영됩니다.</div>
+            <div class="sub">{{listSubText}}</div>
           </div>
           <div class="panel-filter">
             <sc-raw-select value="{{listMeetingValue}}" sc-camel-on-change="{{setListMeeting}}">
@@ -878,24 +1001,43 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
           <div class="empty-note" style="padding:34px 18px;text-align:center">🔍 집회를 선택하고 조회 버튼을 눌러 주세요.</div>
         </sc-if>
         <sc-if value="{{listShown}}" hint-placeholder-val="{{false}}">
-        <div class="table-wrap">
-          <sc-raw-table class="reg-table">
+        <!-- [v37] 건수를 표 위로 이동, 표는 자체 스크롤 영역 안에서 가로·세로 스크롤 -->
+        <div class="list-count"><b>{{listMeetingLabel}}</b> · 출석기록 {{rowCount}}건</div>
+        <!-- [v39] 일괄 작업 줄 — 참석내역조회 탭에서만 -->
+        <sc-if value="{{isTabQuery}}" hint-placeholder-val="{{false}}">
+          <div class="bulk-bar">
+            <!-- [v40] 체크 = 즉시 편집. [일괄수정] 버튼 없음 -->
+            <span class="bulk-cnt">☑ {{bulk.count}}건 선택 · <span class="chg">변경 {{bulk.changed}}건</span></span>
+            <button class="btn primary" disabled="{{bulk.lockNoChange}}" sc-camel-on-click="{{bulk.save}}">💾 일괄저장</button>
+            <button class="btn danger" disabled="{{bulk.lockNoSel}}" sc-camel-on-click="{{bulk.remove}}">🗑 일괄삭제</button>
+            <button class="btn" disabled="{{bulk.lockNoSel}}" sc-camel-on-click="{{bulk.clear}}">선택해제</button>
+            <span class="bulk-progress">{{bulk.progress}}</span>
+          </div>
+        </sc-if>
+        <div class="list-scroll">
+          <sc-raw-table class="reg-table {{bulk.tableCls}}">
             <sc-raw-thead>
               <sc-raw-tr>
-                <sc-raw-th>구역</sc-raw-th><sc-raw-th>인도자</sc-raw-th><sc-raw-th>대상자</sc-raw-th><sc-raw-th>관계</sc-raw-th>
+                <sc-if value="{{isTabQuery}}" hint-placeholder-val="{{false}}"><sc-raw-th class="stk c-chk"><input type="checkbox" checked="{{bulk.allChecked}}" disabled="{{bulk.chkLocked}}" sc-camel-on-change="{{bulk.toggleAll}}" aria-label="전체 선택"></sc-raw-th></sc-if>
+                <sc-raw-th class="stk c-zone">구역</sc-raw-th><sc-raw-th class="stk c-leader">인도자</sc-raw-th><sc-raw-th class="stk c-target">대상자</sc-raw-th><sc-raw-th>관계</sc-raw-th>
                 <sc-raw-th>집회년도</sc-raw-th><sc-raw-th>집회월</sc-raw-th><sc-raw-th>집회종류</sc-raw-th>
                 <sc-raw-th class="day-th">월</sc-raw-th><sc-raw-th class="day-th">화</sc-raw-th><sc-raw-th class="day-th">수</sc-raw-th><sc-raw-th class="day-th">목</sc-raw-th><sc-raw-th class="day-th">금</sc-raw-th><sc-raw-th class="day-th">토</sc-raw-th><sc-raw-th class="day-th">일</sc-raw-th>
-                <sc-raw-th>구원시인</sc-raw-th><sc-raw-th>상담인</sc-raw-th><sc-raw-th>비고</sc-raw-th><sc-raw-th>관리</sc-raw-th>
+                <sc-raw-th>구원시인</sc-raw-th><sc-raw-th>상담인</sc-raw-th><sc-raw-th>비고</sc-raw-th><sc-raw-th class="stk c-act">관리</sc-raw-th>
               </sc-raw-tr>
             </sc-raw-thead>
             <sc-raw-tbody>
               <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
                 <sc-raw-tr class="{{r.rowCls}}">
-                  <sc-raw-td>{{r.zone}}</sc-raw-td>
+                  <sc-if value="{{isTabQuery}}" hint-placeholder-val="{{false}}"><sc-raw-td class="stk c-chk"><input type="checkbox" checked="{{r.checked}}" disabled="{{r.chkDisabled}}" sc-camel-on-change="{{r.toggleCheck}}" aria-label="행 선택"></sc-raw-td></sc-if>
+                  <sc-raw-td class="stk c-zone">{{r.zone}}</sc-raw-td>
                   <!-- [v25 — 참석자 행 수정] 인도자 셀만 클릭 가능(설계 확정 Q2). 클릭하면 이 행의
                        구역/인도자/대상자/관계/집회를 상단 폼으로 불러와 수정 모드로 전환한다. -->
-                  <sc-raw-td><button class="btn-link leader-pick" sc-camel-on-click="{{r.pickLeader}}">{{r.leader}}</button></sc-raw-td>
-                  <sc-raw-td>{{r.target}}</sc-raw-td>
+                  <sc-raw-td class="stk c-leader">
+                    <!-- [v36] 개별등록 탭: 클릭 시 위 폼 수정모드 / 참석내역조회 탭: 일반 글자 -->
+                    <sc-if value="{{isTabSingle}}" hint-placeholder-val="{{true}}"><button class="btn-link leader-pick" sc-camel-on-click="{{r.pickLeader}}">{{r.leader}}</button></sc-if>
+                    <sc-if value="{{isTabQuery}}" hint-placeholder-val="{{false}}">{{r.leader}}</sc-if>
+                  </sc-raw-td>
+                  <sc-raw-td class="stk c-target">{{r.target}}</sc-raw-td>
                   <sc-raw-td>{{r.relation}}</sc-raw-td>
                   <sc-raw-td>{{r.meetingYear}}</sc-raw-td>
                   <sc-raw-td>{{r.meetingMonth}}</sc-raw-td>
@@ -903,16 +1045,21 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
                   <sc-for list="{{r.dayCells}}" as="d" hint-placeholder-count="7">
                     <sc-raw-td class="day-th"><button class="daybtn {{d.cls}}" disabled="{{!r.isEditing}}" sc-camel-on-click="{{d.toggle}}">{{d.mark}}</button></sc-raw-td>
                   </sc-for>
-                  <sc-raw-td><input class="cell-input" value="{{r.saved}}" disabled="{{!r.isEditing}}" sc-camel-on-change="{{r.setSaved}}" placeholder="예: 고태준"></sc-raw-td>
-                  <sc-raw-td><input class="cell-input" value="{{r.counselor}}" disabled="{{!r.isEditing}}" sc-camel-on-change="{{r.setCounselor}}" placeholder="상담인"></sc-raw-td>
-                  <sc-raw-td><input class="cell-input" value="{{r.note}}" disabled="{{!r.isEditing}}" sc-camel-on-change="{{r.setNote}}" placeholder="비고"></sc-raw-td>
-                  <sc-raw-td>
-                    <sc-if value="{{r.isEditing}}" hint-placeholder-val="{{false}}">
+                  <sc-raw-td><input class="cell-input" value="{{r.saved}}" disabled="{{!r.isEditing}}" sc-camel-on-change="{{r.setSaved}}" placeholder="{{r.phSaved}}"></sc-raw-td>
+                  <sc-raw-td><input class="cell-input" value="{{r.counselor}}" disabled="{{!r.isEditing}}" sc-camel-on-change="{{r.setCounselor}}" placeholder="{{r.phCounselor}}"></sc-raw-td>
+                  <sc-raw-td><input class="cell-input" value="{{r.note}}" disabled="{{!r.isEditing}}" sc-camel-on-change="{{r.setNote}}" placeholder="{{r.phNote}}"></sc-raw-td>
+                  <sc-raw-td class="stk c-act">
+                    <sc-if value="{{r.isRowEditing}}" hint-placeholder-val="{{false}}">
                       <button class="btn-link" sc-camel-on-click="{{r.save}}">저장</button>
                       <button class="btn-link" sc-camel-on-click="{{r.cancel}}">취소</button>
                     </sc-if>
-                    <sc-if value="{{r.isNotEditing}}" hint-placeholder-val="{{true}}">
+                    <!-- [v40] 탭 ③: 체크된 행은 "편집 중"/"변경됨", 체크 안 된 행은 [삭제]만 / 탭 ①: [수정][삭제] -->
+                    <sc-if value="{{r.isBulkEditing}}" hint-placeholder-val="{{false}}"><span class="bulk-tag {{r.tagCls}}">{{r.tagText}}</span></sc-if>
+                    <sc-if value="{{r.showEditDel}}" hint-placeholder-val="{{true}}">
                       <button class="btn-link" sc-camel-on-click="{{r.edit}}">수정</button>
+                      <button class="btn-link danger" sc-camel-on-click="{{r.remove}}">삭제</button>
+                    </sc-if>
+                    <sc-if value="{{r.showDelOnly}}" hint-placeholder-val="{{false}}">
                       <button class="btn-link danger" sc-camel-on-click="{{r.remove}}">삭제</button>
                     </sc-if>
                   </sc-raw-td>
@@ -921,9 +1068,9 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
             </sc-raw-tbody>
           </sc-raw-table>
         </div>
-        <div class="empty-note">{{listMeetingLabel}} 출석기록 {{rowCount}}건</div>
         </sc-if>
       </div>
+      </sc-if>
     </sc-if>
 
     <sc-if value="{{isFormB}}" hint-placeholder-val="{{false}}">
@@ -1201,9 +1348,20 @@ var DAY_DEFS = [["mon", "월"], ["tue", "화"], ["wed", "수"], ["thu", "목"], 
 //   '죄/복음':  pass: dayCount(row) >= meeting.gospelStd (그 집회의 죄/복음 기준일수)
 //   '구원시인': pass: !!row.saved
 //   '주인참석': pass: row.days.sun
+// [v33] label/headTitle/headDesc 추가, '5일이상' 규칙 추가(집회마다 등록된 5일이상 기준일수로 판정)
 var PIVOT_RULES = {
-  "하루이상": { title: "참석현황 (하루이상)", fileKey: "하루이상", pass: function (row, mt) { return dayCount(row) >= 1; } }
+  "하루이상": { title: "참석현황 (하루이상)", fileKey: "하루이상", label: "하루이상",
+    headTitle: "하루이상 참석자", headDesc: "집회별·구역별로 하루 이상 참석한 인원을 집계합니다.",
+    pass: function (row, mt) { return dayCount(row) >= 1; } },
+  "5일이상": { title: "참석현황 (5일이상)", fileKey: "5일이상", label: "5일이상",
+    headTitle: "5일이상 참석자", headDesc: "집회별·구역별로 기준일수 이상 참석한 인원을 집계합니다.",
+    pass: function (row, mt) { return dayCount(row) >= longStdOf(mt); } }
 };
+// [v33] 집회의 5일이상 기준일수 — 값이 없거나 0이면 5일
+function longStdOf(mt) {
+  var n = mt ? parseInt(mt.longStd, 10) : 0;
+  return n > 0 ? n : 5;
+}
 function dayCount(row) {
   var n = 0;
   DAY_DEFS.forEach(function (d) { if (row.days && row.days[d[0]]) n++; });
@@ -1326,6 +1484,35 @@ function mapAttendanceRow(attendeeRow, recordRow) {
   };
 }
 
+// ===== [v35] CSV 일괄등록 헬퍼 =====
+var CSV_HEADERS = ["구역", "인도자", "대상자", "관계"];
+// UTF-8로 읽어 깨진 글자(U+FFFD)가 있으면 EUC-KR로 다시 읽는다. BOM 제거.
+function decodeCsv(buf) {
+  var text = new TextDecoder("utf-8").decode(buf);
+  if (text.indexOf("\uFFFD") !== -1) {
+    try { text = new TextDecoder("euc-kr").decode(buf); } catch (e) { /* 미지원 브라우저면 UTF-8 결과 사용 */ }
+  }
+  return text.replace(/^\uFEFF/, "");
+}
+// 따옴표("...", "" 이스케이프)와 쉼표·줄바꿈을 처리하는 CSV 파서
+function parseCsv(text) {
+  var rows = [], row = [], cell = "", q = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); rows.push(row); row = []; cell = "";
+    } else cell += ch;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(function (r) { return r.some(function (c) { return String(c).trim() !== ""; }); });
+}
+
 class Component extends DCLogic {
   constructor(props) {
     super(props);
@@ -1383,7 +1570,21 @@ class Component extends DCLogic {
 
       // [v31] 참석·구원 현황 목록 조회조건 — listMeetingId(콤보 선택값), listApplied(조회 적용값, ""=미조회)
       listMeetingId: "",
-      listApplied: ""
+      listApplied: "",
+
+      // [v35] 참석정보 등록 탭 + CSV 일괄등록 상태 ([v36] 탭 값 3종)
+      attendTab: "single", // [v36] "single"=개별등록, "bulk"=일괄등록, "query"=참석내역조회
+      csvMeetingId: "",
+      csvFileName: "",
+      csvRows: [],
+      csvBusy: false,
+      csvProgress: "",
+
+      // [v39] 참석내역조회 탭 일괄 선택·수정·삭제 (키 = sac_attendance_record.id)
+      selectedIds: {},
+      bulkBackup: {},     // [v40] 체크한 행의 원래 값 { recordId: { days, saved, counselor, note } }
+      bulkBusy: false,
+      bulkProgress: ""
     };
     this.loadAll();
   }
@@ -1474,7 +1675,10 @@ class Component extends DCLogic {
       if (!zoneMap[zone]) zoneMap[zone] = columns.map(function () { return 0; });
       if (rule.pass(r, columns[idx].meeting)) zoneMap[zone][idx]++;
     });
-    var zones = Object.keys(zoneMap).sort(compareZone);
+    // [v34] 계가 0인 구역 제외 — 교구의 모든 구역이 빠지면 그 교구 소계도 생기지 않음
+    var zones = Object.keys(zoneMap).filter(function (z) {
+      return zoneMap[z].reduce(function (a, b) { return a + b; }, 0) > 0;
+    }).sort(compareZone);
 
     function sum(arr) { return arr.reduce(function (a, b) { return a + b; }, 0); }
     // [v30] 소계 라벨: 1x 구역 → "1교구 소계", 0으로 시작·기타 구역 → "기타 소계"
@@ -1517,7 +1721,10 @@ class Component extends DCLogic {
       isoDate: now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate()),
       ymd: "" + now.getFullYear() + pad2(now.getMonth() + 1) + pad2(now.getDate()),
       columns: columns, lines: lines,
-      hasColumns: columns.length > 0, noColumns: columns.length === 0
+      hasColumns: columns.length > 0, noColumns: columns.length === 0,
+      // [v34] 표시할 구역 유무
+      hasRows: columns.length > 0 && zones.length > 0,
+      noRows: columns.length > 0 && zones.length === 0
     };
   }
 
@@ -1542,6 +1749,7 @@ class Component extends DCLogic {
   // [v26] CSV 다운로드 — 화면 표 순서 그대로(제목·기준일 행, 헤더, 구역/소계, 총합계), UTF-8 BOM
   exportPivotCsv(pivot) {
     if (!pivot || !pivot.hasColumns) { alert("조회된 집회가 없습니다."); return; }
+    if (!pivot.hasRows) { alert("조건에 해당하는 참석자가 없습니다."); return; } // [v34]
     var rows = [];
     rows.push([pivot.title, "", "기준일 " + pivot.isoDate]);
     rows.push(["구역", "계"].concat(pivot.columns.map(function (c) { return c.month + " " + c.kind; })));
@@ -1802,6 +2010,8 @@ class Component extends DCLogic {
   // (설계 확정 Q3) 표에서 인라인 편집(요일 등) 중인 행이 있으면 먼저 취소해 상호 배타를 지킨다.
   pickLeaderRow(attendeeId) {
     var self = this;
+    // [v36] 개별등록 탭에서만 호출 — 다른 탭이면 무시(참석내역조회 탭은 인도자가 일반 글자)
+    if (this.state.attendTab !== "single") return;
     var target = this.state.attendanceRows.filter(function (r) { return r.attendeeId === attendeeId; })[0];
     if (!target) return;
     if (this.state.editingRecordId) {
@@ -1826,12 +2036,157 @@ class Component extends DCLogic {
   setListMeeting(val) { this.setState({ listMeetingId: val }); }
   applyListMeeting() {
     if (!this.state.listMeetingId) { alert("조회할 집회를 선택하세요."); return; }
+    if (!this.guardBulk()) return; // [v39] 일괄 작업 확인·선택 해제
     // 진행 중이던 행 인라인 편집·인도자 수정모드 해제 후 조회
     if (this.state.editingRecordId) this.cancelEditRecord(this.state.editingRecordId);
     if (this.state.attendForm.editingAttendeeId) this.resetForm();
     this.setState({ listApplied: this.state.listMeetingId });
+    // [v37] 조회 후 표 스크롤을 맨 위·맨 왼쪽으로 되돌림
+    setTimeout(function () {
+      if (typeof document === "undefined") return;
+      var els = document.querySelectorAll(".list-scroll");
+      for (var i = 0; i < els.length; i++) { els[i].scrollTop = 0; els[i].scrollLeft = 0; }
+    }, 0);
   }
   resetListMeeting() { this.setState({ listMeetingId: "", listApplied: "" }); }
+
+  // ── [v35] 탭 전환 — 수정모드·행 편집 해제, 현황표 조회조건·결과는 두 탭 공유(유지) ──
+  setAttendTab(tab) {
+    if (this.state.csvBusy) { alert("일괄등록이 진행 중입니다. 완료 후 이동하세요."); return; }
+    if (this.state.attendTab === tab) return;
+    if (!this.guardBulk()) return; // [v39]
+    if (this.state.editingRecordId) this.cancelEditRecord(this.state.editingRecordId);
+    if (this.state.attendForm.editingAttendeeId) this.resetForm();
+    this.setState({ attendTab: tab });
+  }
+
+  // ── [v35] CSV 일괄등록 ──
+  resetCsv() {
+    if (this.state.csvBusy) return;
+    this.setState({ csvFileName: "", csvRows: [], csvProgress: "" });
+  }
+  setCsvMeeting(val) {
+    // 집회가 바뀌면 DB 중복 판정이 달라지므로 미리보기를 다시 검증한다.
+    var self = this;
+    this.setState({ csvMeetingId: val }, function () {
+      if (self.state.csvRows.length) self.setState({ csvRows: self.validateCsvRows(self.state.csvRows) });
+    });
+  }
+  downloadCsvTemplate() {
+    var csv = "\uFEFF" + CSV_HEADERS.join(",") + "\r\n";
+    try {
+      var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "참석자_일괄등록_양식.csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    } catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
+  }
+  onCsvFile(e) {
+    var self = this;
+    var input = e && e.target;
+    var file = input && input.files && input.files[0];
+    if (!file) return;
+    if (this.state.csvBusy) { input.value = ""; return; }
+    file.arrayBuffer().then(function (buf) {
+      var table = parseCsv(decodeCsv(buf));
+      input.value = ""; // 같은 파일을 다시 선택해도 change 이벤트가 나도록
+      if (!table.length) { alert("파일에 내용이 없습니다."); return; }
+      var head = table[0].map(function (h) { return String(h).trim(); });
+      var idx = CSV_HEADERS.map(function (h) { return head.indexOf(h); });
+      if (idx.some(function (i) { return i < 0; })) {
+        alert("양식이 다릅니다. 첫 줄에 구역,인도자,대상자,관계 항목이 있어야 합니다.");
+        return;
+      }
+      var rows = table.slice(1).map(function (r, n) {
+        function at(k) { return String(r[idx[k]] == null ? "" : r[idx[k]]).trim(); }
+        return { no: n + 1, zone: at(0), leader: at(1), target: at(2), relation: at(3), status: "", msg: "" };
+      });
+      if (!rows.length) { alert("등록할 데이터 행이 없습니다."); return; }
+      self.setState({ csvFileName: file.name, csvProgress: "", csvRows: self.validateCsvRows(rows) });
+    }).catch(function (err) { input.value = ""; alert("파일 읽기 실패: " + ((err && err.message) || err)); });
+  }
+  // 행별 검증 — 필수값(구역·대상자), DB 중복(선택 집회 기준), 파일 안 중복
+  validateCsvRows(rows) {
+    var ctx = this.codeCtx();
+    var mt = this.state.meetings.filter(function (m) { return m.id === this.state.csvMeetingId; }, this)[0];
+    var key = mt ? ctx.normKey(mt.year, mt.month, mt.kind) : null;
+    var dbSet = {};
+    if (key) this.state.attendees.forEach(function (a) {
+      if (ctx.normKey(a.meeting_year, a.meeting_month, a.meeting_kind) === key) dbSet[(a.zone_no || "") + "|" + (a.target_name || "")] = true;
+    });
+    var seen = {};
+    return rows.map(function (r) {
+      var o = Object.assign({}, r, { status: "ok", msg: "정상" });
+      var k = r.zone + "|" + r.target;
+      if (!r.zone && !r.target) { o.status = "ng"; o.msg = "구역·대상자 없음"; }
+      else if (!r.zone) { o.status = "ng"; o.msg = "구역 없음"; }
+      else if (!r.target) { o.status = "ng"; o.msg = "대상자 없음"; }
+      else if (dbSet[k]) { o.status = "ng"; o.msg = "이미 등록됨"; }
+      else if (seen[k]) { o.status = "ng"; o.msg = "파일 안 중복"; }
+      if (r.zone && r.target) seen[k] = true;
+      return o;
+    });
+  }
+  // 정상 행만 순차 등록 — 실패 시 방금 만든 대상자 행을 되돌리고 다음 행으로 진행
+  bulkRegisterCsv() {
+    var self = this;
+    if (this.state.csvBusy) return;
+    var mt = this.state.meetings.filter(function (m) { return m.id === self.state.csvMeetingId; })[0];
+    if (!mt) { alert("등록할 집회를 선택하세요."); return; }
+    var ctx = this.codeCtx();
+    var yc = ctx.toCode("year", mt.year), mc = ctx.toCode("month", mt.month), kc = ctx.toCode("kind", mt.kind);
+    if (!yc || !mc || !kc) { alert("선택한 집회의 년도·월·종류가 공통코드에 없습니다."); return; }
+    var rows = this.validateCsvRows(this.state.csvRows);
+    var targets = rows.filter(function (r) { return r.status === "ok"; });
+    if (!targets.length) { this.setState({ csvRows: rows }); alert("등록할 정상 행이 없습니다."); return; }
+    var label = ctx.yearLabel(mt.year) + " " + ctx.monthLabel(mt.month) + " " + ctx.kindLabel(mt.kind);
+    if (!confirm(label + "에 " + targets.length + "건을 등록합니다. 계속하시겠습니까?")) return;
+
+    var okNos = {}, failNos = {}, done = 0;
+    this.setState({ csvBusy: true, csvRows: rows, csvProgress: "0 / " + targets.length + " 등록 중…" });
+    function one(r) {
+      return callGatewayFull('add', 'sac_attendee', {
+        data: { zone_no: r.zone, leader_name: r.leader, target_name: r.target, relation_code: r.relation,
+          meeting_year: yc, meeting_month: mc, meeting_kind: kc }
+      }).then(function (json) {
+        var newId = json && json.id;
+        if (!newId) throw new Error("신규 대상자 id 없음");
+        return callGateway('add', 'sac_attendance_record', {
+          data: { attendee_id: Number(newId), mon_yn: 'N', tue_yn: 'N', wed_yn: 'N', thu_yn: 'N', fri_yn: 'N', sat_yn: 'N', sun_yn: 'N' }
+        }).catch(function (e) {
+          return callGateway('delete', 'sac_attendee', { id: Number(newId) }).catch(function () {}).then(function () { throw e; });
+        });
+      });
+    }
+    var chain = Promise.resolve();
+    targets.forEach(function (r) {
+      chain = chain.then(function () {
+        return one(r).then(function () { okNos[r.no] = true; }, function (e) { failNos[r.no] = (e && e.message) || String(e); });
+      }).then(function () {
+        done++;
+        self.setState({ csvProgress: done + " / " + targets.length + " 등록 중…" });
+      });
+    });
+    chain.then(function () {
+      var okN = Object.keys(okNos).length, failN = Object.keys(failNos).length;
+      // 성공 행은 미리보기에서 제거, 실패 행은 "실패"로 남김(오류 행도 그대로 유지)
+      var remain = rows.filter(function (r) { return !okNos[r.no]; }).map(function (r) {
+        return failNos[r.no] ? Object.assign({}, r, { status: "fail", msg: "실패: " + failNos[r.no] }) : r;
+      });
+      var mid = self.state.csvMeetingId;
+      self.setState({ csvBusy: false, csvRows: remain, csvProgress: "", csvFileName: remain.length ? self.state.csvFileName : "",
+        listMeetingId: mid, listApplied: mid });
+      alert("일괄등록 완료 — 성공 " + okN + "건 / 실패 " + failN + "건");
+      return self.loadAll().then(function () {
+        // 재조회 후 남은 행 재검증(실패 표시는 유지)
+        var again = self.validateCsvRows(self.state.csvRows.filter(function (r) { return r.status !== "fail"; }));
+        var failRows = self.state.csvRows.filter(function (r) { return r.status === "fail"; });
+        self.setState({ csvRows: again.concat(failRows).sort(function (a, b) { return a.no - b.no; }) });
+      });
+    });
+  }
   setAttendMode(val) {
     this.setState({
       attendForm: Object.assign({}, this.state.attendForm, { mode: val, existingAttendeeId: "" }),
@@ -1943,6 +2298,7 @@ class Component extends DCLogic {
   // FK(fk_sac_attendance_attendee, ON DELETE CASCADE)로 attendee 삭제 시 함께 삭제된다.
   removeRecord(attendeeId) {
     var self = this;
+    if (this.state.bulkBusy) { alert("일괄 작업이 진행 중입니다. 완료 후 이용하세요."); return; } // [v40]
     if (!confirm('이 집회의 참석기록이 삭제됩니다. 계속하시겠습니까?')) return;
     // [v25] 삭제하려는 행이 지금 상단 수정모드로 열려 있는 행이면, 삭제 후 폼도 함께 초기화한다.
     var wasEditing = this.state.attendForm.editingAttendeeId === String(attendeeId);
@@ -1951,10 +2307,139 @@ class Component extends DCLogic {
       .catch(function (e) { alert('삭제 실패: ' + ((e && e.message) || e)); });
   }
 
+  // ── [v39] 일괄 선택·수정·삭제 / [v40] 체크 = 즉시 편집 ──
+  canEditRow(id) {
+    if (!id) return false;
+    if (this.state.editingRecordId === id) return true;
+    return !!this.state.selectedIds[id]; // 체크된 행(참석내역조회 탭)
+  }
+  selectedList() { var o = this.state.selectedIds; return Object.keys(o).filter(function (k) { return o[k]; }); }
+  rowById(id) { return this.state.attendanceRows.filter(function (r) { return r.id === id; })[0]; }
+  // 체크 후 값이 바뀐 행인지
+  isRowChanged(id) {
+    var b = this.state.bulkBackup[id], r = this.rowById(id);
+    if (!b || !r) return false;
+    if ((b.saved || "") !== (r.saved || "") || (b.counselor || "") !== (r.counselor || "") || (b.note || "") !== (r.note || "")) return true;
+    return DAY_DEFS.some(function (d) { return !!b.days[d[0]] !== !!r.days[d[0]]; });
+  }
+  changedList() { var self = this; return this.selectedList().filter(function (id) { return self.isRowChanged(id); }); }
+  backupOf(r) { return { days: Object.assign({}, r.days), saved: r.saved, counselor: r.counselor, note: r.note }; }
+  // 지정 행을 원래 값으로 되돌리고 체크 해제
+  releaseRows(ids) {
+    var backup = this.state.bulkBackup, sel = Object.assign({}, this.state.selectedIds), nb = Object.assign({}, backup);
+    ids.forEach(function (id) { delete sel[id]; delete nb[id]; });
+    this.setState({
+      attendanceRows: this.state.attendanceRows.map(function (r) {
+        var b = r.id && ids.indexOf(r.id) !== -1 && backup[r.id];
+        return b ? Object.assign({}, r, { days: Object.assign({}, b.days), saved: b.saved, counselor: b.counselor, note: b.note }) : r;
+      }),
+      selectedIds: sel, bulkBackup: nb
+    });
+  }
+  // 조회·탭·메뉴 이동 전: 진행 중이면 막고, 변경 행이 있으면 확인 후 버림. 통과 시 모두 해제.
+  guardBulk() {
+    if (this.state.bulkBusy) { alert("일괄 작업이 진행 중입니다. 완료 후 이용하세요."); return false; }
+    var ids = this.selectedList();
+    if (!ids.length) return true;
+    if (this.changedList().length && !confirm("저장하지 않은 변경 내용이 사라집니다. 계속하시겠습니까?")) return false;
+    this.releaseRows(ids);
+    return true;
+  }
+  toggleSelect(id) {
+    if (!id || this.state.bulkBusy || this.state.editingRecordId) return;
+    if (this.state.selectedIds[id]) {
+      if (this.isRowChanged(id) && !confirm("이 행의 변경 내용을 되돌립니다. 계속하시겠습니까?")) return;
+      this.releaseRows([id]);
+    } else {
+      var r = this.rowById(id);
+      if (!r) return;
+      var sel = Object.assign({}, this.state.selectedIds); sel[id] = true;
+      var nb = Object.assign({}, this.state.bulkBackup); nb[id] = this.backupOf(r);
+      this.setState({ selectedIds: sel, bulkBackup: nb });
+    }
+  }
+  toggleSelectAll(ids) {
+    var self = this;
+    if (this.state.bulkBusy || this.state.editingRecordId) return;
+    var o = this.state.selectedIds;
+    var all = ids.length > 0 && ids.every(function (id) { return o[id]; });
+    if (all) {
+      if (this.changedList().length && !confirm("변경된 행이 있습니다. 모두 원래 값으로 되돌립니다. 계속하시겠습니까?")) return;
+      this.releaseRows(ids);
+    } else {
+      var sel = Object.assign({}, o), nb = Object.assign({}, this.state.bulkBackup);
+      ids.forEach(function (id) { if (!sel[id]) { var r = self.rowById(id); if (r) { sel[id] = true; nb[id] = self.backupOf(r); } } });
+      this.setState({ selectedIds: sel, bulkBackup: nb });
+    }
+  }
+  clearSelect() {
+    if (this.state.bulkBusy) return;
+    if (this.changedList().length && !confirm("변경된 행이 있습니다. 모두 원래 값으로 되돌립니다. 계속하시겠습니까?")) return;
+    this.releaseRows(this.selectedList());
+  }
+  // 바뀐 행만 순차 저장 — 성공·미변경 행은 체크 해제, 실패 행은 편집 상태로 남김
+  saveBulkEdit() {
+    var self = this;
+    if (this.state.bulkBusy) return;
+    var ids = this.changedList();
+    if (!ids.length) { alert("변경된 내용이 없습니다."); return; }
+    var changed = ids.map(function (id) { return self.rowById(id); });
+    if (!confirm(changed.length + "건을 저장합니다. 계속하시겠습니까?")) return;
+    var failed = {}, done = 0;
+    this.setState({ bulkBusy: true, bulkProgress: "0 / " + changed.length + " 저장 중…" });
+    var chain = Promise.resolve();
+    changed.forEach(function (r) {
+      chain = chain.then(function () {
+        var data = { id: Number(r.id) };
+        DAY_DEFS.forEach(function (d) { data[d[0] + "_yn"] = boolToYn(r.days[d[0]]); });
+        data.gospel_confessor = r.saved; data.counselor_name = r.counselor; data.note = r.note;
+        return callGateway('update', 'sac_attendance_record', { data: data }).catch(function () { failed[r.id] = true; });
+      }).then(function () { done++; self.setState({ bulkProgress: done + " / " + changed.length + " 저장 중…" }); });
+    });
+    chain.then(function () {
+      var failN = Object.keys(failed).length;
+      var nb = {};
+      Object.keys(failed).forEach(function (id) { nb[id] = self.state.bulkBackup[id]; });
+      self.setState({ bulkBusy: false, bulkProgress: "", selectedIds: failed, bulkBackup: nb });
+      alert("일괄저장 완료 — 성공 " + (changed.length - failN) + "건 / 실패 " + failN + "건");
+      return self.loadAll(); // 실패 행은 DB 값(=백업 값)으로 다시 읽혀 편집 상태로 남음
+    });
+  }
+  // 선택 행 순차 삭제(sac_attendee 삭제 → 참석기록 CASCADE) — 실패 행은 선택 상태로 남김
+  bulkDelete() {
+    var self = this;
+    if (this.state.bulkBusy) return;
+    var ids = this.selectedList();
+    if (!ids.length) { alert("삭제할 행을 선택하세요."); return; }
+    if (this.state.editingRecordId) { alert("개별 수정 중인 행이 있습니다. 저장 또는 취소 후 이용하세요."); return; }
+    var targets = ids.map(function (id) { return self.rowById(id); }).filter(Boolean);
+    var chgN = this.changedList().length;
+    var msg = "선택한 " + targets.length + "건의 참석기록이 삭제됩니다." + (chgN ? " (저장하지 않은 변경 " + chgN + "건도 함께 사라집니다.)" : "") + " 계속하시겠습니까?";
+    if (!confirm(msg)) return;
+    var failed = {}, done = 0;
+    this.setState({ bulkBusy: true, bulkProgress: "0 / " + targets.length + " 삭제 중…" });
+    var chain = Promise.resolve();
+    targets.forEach(function (r) {
+      chain = chain.then(function () {
+        return callGateway('delete', 'sac_attendee', { id: Number(r.attendeeId) }).catch(function () { failed[r.id] = true; });
+      }).then(function () { done++; self.setState({ bulkProgress: done + " / " + targets.length + " 삭제 중…" }); });
+    });
+    chain.then(function () {
+      var failN = Object.keys(failed).length;
+      var editingGone = targets.some(function (r) { return !failed[r.id] && self.state.attendForm.editingAttendeeId === r.attendeeId; });
+      if (editingGone) self.resetForm();
+      var nb = {};
+      Object.keys(failed).forEach(function (id) { nb[id] = self.state.bulkBackup[id]; });
+      self.setState({ bulkBusy: false, bulkProgress: "", selectedIds: failed, bulkBackup: nb });
+      alert("일괄삭제 완료 — 성공 " + (targets.length - failN) + "건 / 실패 " + failN + "건");
+      return self.loadAll();
+    });
+  }
+
   // [v24] 요일 체크: 편집 모드(그 행이 editingRecordId일 때)에서만 동작 — 로컬 상태만 바꾸고
   // 서버 저장은 하지 않는다. 실제 저장은 saveEditRecord()에서 한 번에 처리한다.
   toggleDay(id, dayKey) {
-    if (this.state.editingRecordId !== id) return; // 편집 모드가 아니면 무시
+    if (!this.canEditRow(id)) return; // 편집 모드가 아니면 무시 ([v39] 일괄수정 행 포함)
     this.setState({
       attendanceRows: this.state.attendanceRows.map(function (r) {
         if (r.id !== id) return r;
@@ -1967,7 +2452,7 @@ class Component extends DCLogic {
 
   // [v24] 구원시인/상담인/비고 입력 필드 — 편집 모드에서만 동작, 로컬 상태만 변경(서버 저장 안 함).
   setRecordField(id, field, val) {
-    if (this.state.editingRecordId !== id) return; // 편집 모드가 아니면 무시
+    if (!this.canEditRow(id)) return; // 편집 모드가 아니면 무시 ([v39] 일괄수정 행 포함)
     this.setState({
       attendanceRows: this.state.attendanceRows.map(function (r) {
         if (r.id !== id) return r;
@@ -1982,6 +2467,7 @@ class Component extends DCLogic {
   // 한 번에 한 행만 편집 가능 — 다른 행이 편집 중이면 먼저 취소(원복)한다.
   startEditRecord(id) {
     if (!id) return;
+    if (this.state.bulkBusy) { alert("일괄 작업이 진행 중입니다. 완료 후 이용하세요."); return; } // [v40]
     var target = this.state.attendanceRows.filter(function (r) { return r.id === id; })[0];
     if (!target) return;
     if (this.state.editingRecordId && this.state.editingRecordId !== id) {
@@ -2065,6 +2551,7 @@ class Component extends DCLogic {
       cols = ["이름", "구역", "관계", "참석일수", "상태"];
       rowMapper = function (r) { return [r.target, r.zone, r.relation || "-", (r._dc === 7 ? "전일" : r._dc + "일"), r._dc >= longStd ? ["good", "양호"] : ["crit", "불참 위험"]]; };
     } else if (view === "5일이상") {
+      // [v33] 미사용 — 5일이상 메뉴는 피벗표(buildPivot)로 전환됨. 코드만 보존.
       title = "5일이상 참석자"; desc = "기준일수(" + longStd + "일) 이상 참석한 핵심 인원입니다.";
       filtered = withCount.filter(function (r) { return r._dc >= longStd; });
       statsRaw = [
@@ -2184,7 +2671,7 @@ class Component extends DCLogic {
     // [v25 — 참석자 행 수정] 다른 메뉴로 이동했다가 "참석정보 등록"으로 돌아왔을 때 수정모드가
     // 남아있지 않도록, 메뉴 전환 시 resetForm()을 함께 호출한다.
     var navSubItems = MENU_KEYS.map(function (key) {
-      return { key: key, label: key, cls: key === view ? "active" : "", select: function () { self.resetForm(); self.resetPivot(); self.resetListMeeting(); self.setState({ view: key, expandAttend: true, sidebarOpen: false }); } };
+      return { key: key, label: key, cls: key === view ? "active" : "", select: function () { if (self.state.csvBusy) { alert("일괄등록이 진행 중입니다. 완료 후 이동하세요."); return; } if (!self.guardBulk()) return; self.resetForm(); self.resetPivot(); self.resetListMeeting(); self.setState({ attendTab: "single", csvMeetingId: "", csvFileName: "", csvRows: [], csvProgress: "" }); self.setState({ view: key, expandAttend: true, sidebarOpen: false }); } };
     });
 
     var topDefs = [
@@ -2193,7 +2680,7 @@ class Component extends DCLogic {
       { key: "공통코드관리", label: "공통코드관리", icon: "⚙" }
     ];
     var navTopItems = topDefs.map(function (d) {
-      return { key: d.key, label: d.label, icon: d.icon, cls: d.key === view ? "active" : "", select: function () { self.resetForm(); self.resetPivot(); self.resetListMeeting(); self.setState({ view: d.key, sidebarOpen: false }); } };
+      return { key: d.key, label: d.label, icon: d.icon, cls: d.key === view ? "active" : "", select: function () { if (self.state.csvBusy) { alert("일괄등록이 진행 중입니다. 완료 후 이동하세요."); return; } if (!self.guardBulk()) return; self.resetForm(); self.resetPivot(); self.resetListMeeting(); self.setState({ attendTab: "single", csvMeetingId: "", csvFileName: "", csvRows: [], csvProgress: "" }); self.setState({ view: d.key, sidebarOpen: false }); } };
     });
 
     // [v18 — 구성 P] 참석정보 등록 화면의 목록 — attendanceRows(=attendee 1행당 1건, 집회 정보는
@@ -2212,7 +2699,11 @@ class Component extends DCLogic {
     var rows = this.state.attendanceRows.filter(function (r) {
       return listKey && mcx.normKey(r.meetingYear, r.meetingMonth, r.meetingKind) === listKey;
     }).map(function (r) {
-      var isEditing = !!r.id && self.state.editingRecordId === r.id;
+      var isRowEditing = !!r.id && self.state.editingRecordId === r.id;
+      var checked = !!(r.id && self.state.selectedIds[r.id]);
+      var isBulkEditing = checked && self.state.attendTab === "query"; // [v40] 체크 = 즉시 편집
+      var isEditing = isRowEditing || isBulkEditing;
+      var rowChanged = isBulkEditing && self.isRowChanged(r.id);
       var dayCells = DAY_DEFS.map(function (d) {
         var on = !!r.days[d[0]];
         return { key: d[0], mark: on ? "O" : "", cls: on ? "on" : "", toggle: function () { if (r.id) self.toggleDay(r.id, d[0]); } };
@@ -2225,8 +2716,18 @@ class Component extends DCLogic {
         dayCells: dayCells, saved: r.saved, counselor: r.counselor, note: r.note,
         // [v24] 수정 버튼을 눌러야 편집 가능 — sac_attendance_record만 대상.
         isEditing: isEditing, isNotEditing: !isEditing,
+        // [v39] 개별 편집/일괄 편집 구분 + 선택
+        isRowEditing: isRowEditing, isBulkEditing: isBulkEditing,
+        tagText: rowChanged ? "변경됨" : "편집 중", tagCls: rowChanged ? "changed" : "",
+        showEditDel: self.state.attendTab !== "query" && !isRowEditing,
+        showDelOnly: self.state.attendTab === "query" && !isBulkEditing,
+        checked: checked,
+        chkDisabled: !r.id || self.state.bulkBusy || !!self.state.editingRecordId,
+        toggleCheck: function () { self.toggleSelect(r.id); },
+        // [v37] 안내 글자는 편집 중인 행에만 표시
+        phSaved: isEditing ? "예: 고태준" : "", phCounselor: isEditing ? "상담인" : "", phNote: isEditing ? "비고" : "",
         // [v25 — 참석자 행 수정] 상단 폼에서 지금 이 행을 수정 중이면 강조 표시.
-        rowCls: self.state.attendForm.editingAttendeeId === r.attendeeId ? "selected" : "",
+        rowCls: (self.state.attendForm.editingAttendeeId === r.attendeeId ? "selected" : "") + (checked && self.state.attendTab === "query" ? " checked" : ""),
         setSaved: function (e) { if (r.id) self.setRecordField(r.id, "saved", e && e.target ? e.target.value : e); },
         setCounselor: function (e) { if (r.id) self.setRecordField(r.id, "counselor", e && e.target ? e.target.value : e); },
         setNote: function (e) { if (r.id) self.setRecordField(r.id, "note", e && e.target ? e.target.value : e); },
@@ -2238,9 +2739,30 @@ class Component extends DCLogic {
       };
     });
 
-    // ── [v26 — 하루이상 피벗표] ──
+    // ── [v39] 일괄 작업 줄 값 ──
+    var listIds = rows.map(function (r) { return r.id; }).filter(Boolean);
+    var selCount = listIds.filter(function (id) { return self.state.selectedIds[id]; }).length;
+    var chkLocked = self.state.bulkBusy || !!self.state.editingRecordId;
+    var chgCount = self.changedList().length;
+    var bulk = {
+      count: selCount, changed: chgCount,
+      busy: self.state.bulkBusy,
+      lockNoSel: selCount === 0 || self.state.bulkBusy || !!self.state.editingRecordId,
+      lockNoChange: chgCount === 0 || self.state.bulkBusy,
+      chkLocked: chkLocked,
+      allChecked: listIds.length > 0 && selCount === listIds.length,
+      progress: self.state.bulkProgress,
+      tableCls: self.state.attendTab === "query" ? "has-chk" : "",
+      toggleAll: function () { self.toggleSelectAll(listIds); },
+      clear: function () { self.clearSelect(); },
+      save: function () { self.saveBulkEdit(); },
+      remove: function () { self.bulkDelete(); }
+    };
+
+    // ── [v26 — 하루이상 피벗표] / [v33] 5일이상도 동일 피벗표 사용 ──
     // 메뉴 전환 시 resetPivot()으로 조회조건이 초기화(빈 값)되며, 빈 값은 기본값(현재년도·전체 집회종류)으로 해석한다.
-    var isPivotView = view === "하루이상";
+    var isPivotView = !!PIVOT_RULES[view]; // [v33]
+    var pivotRule = isPivotView ? PIVOT_RULES[view] : null;
     var ctx = this.codeCtx();
     var thisYear = String(new Date().getFullYear());
     var curYearOpt = ctx.yearList.filter(function (mn) { return String(stripUnit(mn.name)) === thisYear; })[0] || ctx.yearList[0];
@@ -2248,14 +2770,14 @@ class Component extends DCLogic {
     var appliedYear = this.state.pivotApplied.year || defaultPivotYear;
     var appliedKind = this.state.pivotApplied.kind || "";
     var pivot = isPivotView
-      ? this.buildPivot("하루이상", appliedYear, appliedKind, ctx)
-      : { title: "", dateLabel: "", columns: [], lines: [], hasColumns: false, noColumns: false };
+      ? this.buildPivot(view, appliedYear, appliedKind, ctx)
+      : { title: "", dateLabel: "", columns: [], lines: [], hasColumns: false, noColumns: false, hasRows: false, noRows: false };
     var drillState = this.state.pivotDrill;
     var drillCol = (isPivotView && drillState) ? pivot.columns.filter(function (c) { return c.meetingId === drillState.meetingId; })[0] : null;
-    var drillRows = drillCol ? this.getPivotCellRows("하루이상", drillState.zone, drillState.meetingId) : [];
+    var drillRows = drillCol ? this.getPivotCellRows(view, drillState.zone, drillState.meetingId) : [];
     var pivotDrill = {
       title: drillCol
-        ? (drillState.zone || "(미지정)") + "구역 · " + ctx.yearLabel(drillCol.meeting.year) + " " + drillCol.month + " " + drillCol.kind + " · 하루이상 " + drillRows.length + "명"
+        ? (drillState.zone || "(미지정)") + "구역 · " + ctx.yearLabel(drillCol.meeting.year) + " " + drillCol.month + " " + drillCol.kind + " · " + pivotRule.label + " " + drillRows.length + "명"
         : "",
       rows: drillRows
     };
@@ -2274,6 +2796,7 @@ class Component extends DCLogic {
       isLegacyDash: isDashboard && !isPivotView,
       isPivotView: isPivotView,
       pivot: pivot,
+      pivotHead: { title: pivotRule ? pivotRule.headTitle : "", desc: pivotRule ? pivotRule.headDesc : "" },
       pivotYearOptions: ctx.yearList.map(function (mn) { return { value: mn.code, label: mn.name }; }),
       pivotKindOptions: ctx.kindList.map(function (mn) { return { value: mn.code, label: mn.name }; }),
       pivotYearValue: this.state.pivotYear || defaultPivotYear,
@@ -2287,6 +2810,37 @@ class Component extends DCLogic {
       closePivotDrill: function () { self.closePivotDrill(); },
       stopProp: function (e) { if (e && e.stopPropagation) e.stopPropagation(); },
       isFormA: view === "참석정보 등록",
+      // [v35] 탭 + CSV 일괄등록
+      isTabSingle: this.state.attendTab === "single",
+      isTabBulk: this.state.attendTab === "bulk",
+      isTabQuery: this.state.attendTab === "query",
+      showList: this.state.attendTab === "single" || this.state.attendTab === "query",
+      tabSingleCls: this.state.attendTab === "single" ? "active" : "",
+      tabBulkCls: this.state.attendTab === "bulk" ? "active" : "",
+      tabQueryCls: this.state.attendTab === "query" ? "active" : "",
+      selectTabSingle: function () { self.setAttendTab("single"); },
+      selectTabBulk: function () { self.setAttendTab("bulk"); },
+      selectTabQuery: function () { self.setAttendTab("query"); },
+      csv: (function () {
+        var cr = self.state.csvRows;
+        var ok = cr.filter(function (r) { return r.status === "ok"; }).length;
+        return {
+          meetingId: self.state.csvMeetingId,
+          setMeetingId: function (e) { self.setCsvMeeting(e && e.target ? e.target.value : e); },
+          downloadTemplate: function () { self.downloadCsvTemplate(); },
+          onFile: function (e) { self.onCsvFile(e); },
+          fileLabel: self.state.csvFileName || "선택된 파일 없음",
+          hasRows: cr.length > 0,
+          total: cr.length, okCount: ok, ngCount: cr.length - ok,
+          progressText: self.state.csvProgress,
+          rows: cr.map(function (r) {
+            return { no: String(r.no), zone: r.zone || "-", leader: r.leader || "-", target: r.target || "-", relation: r.relation || "-",
+              result: r.msg, tagCls: r.status === "ok" ? "good" : (r.status === "fail" ? "crit" : "warn") };
+          }),
+          reset: function () { self.resetCsv(); },
+          register: function () { self.bulkRegisterCsv(); }
+        };
+      })(),
       isFormB: view === "집회정보등록",
       isCommonCode: view === "공통코드관리",
       dash: this.buildDash(isDashboard ? view : "총괄"),
@@ -2319,6 +2873,11 @@ class Component extends DCLogic {
       },
       rows: rows,
       rowCount: rows.length,
+      bulk: bulk, // [v39]
+      // [v40] 탭별 안내문구
+      listSubText: this.state.attendTab === "query"
+        ? "집회를 선택하고 조회하면 해당 집회의 참석 현황이 표시됩니다. 체크한 행은 바로 수정할 수 있고, \"일괄저장\"을 눌러야 반영됩니다."
+        : "집회를 선택하고 조회하면 해당 집회의 참석 현황이 표시됩니다. 행의 \"수정\"을 누르면 그 행만 편집할 수 있고, \"저장\"을 눌러야 반영됩니다.",
       listMeetingOptions: listMeetingOptions,
       listMeetingValue: this.state.listMeetingId,
       setListMeeting: function (e) { self.setListMeeting(e && e.target ? e.target.value : e); },
