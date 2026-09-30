@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v41] 참석내역조회 탭: 조회 버튼 옆 엑셀다운(CSV, 조회된 전체 행, 화면과 같은 칸, 저장된 값 기준) -->
 <!-- [v40] 참석내역조회 탭: 체크하면 즉시 편집(일괄수정 버튼 제거), 해제 시 원래 값 복원, 행별 [수정] 제거·[삭제]만 유지 -->
 <!-- [v39] 참석내역조회 탭: 여러 행 선택 후 일괄수정(선택 행 동시 편집→일괄저장)·일괄삭제 -->
 <!-- [v38] CSV 일괄등록: 등록 집회 콤보·양식 다운로드·파일 선택·파일명을 한 줄로 배치(좁은 화면은 줄바꿈) -->
@@ -430,6 +431,7 @@ input:disabled{color:#b3b8c4;background:#f6f7f9;cursor:not-allowed}
 .panel-head .sub{font-size:12px;color:#6b7280;margin-top:2px}
 .panel-head-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .panel-filter{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.panel-filter .btn:disabled{opacity:.45;cursor:not-allowed} /* [v41] */
 .major-search-row{padding:0 18px 14px}
 .major-search-row input[type=search]{flex:1;min-width:160px}
 .panel-body{padding:16px 18px}
@@ -557,7 +559,7 @@ input.csv-hidden{display:none}
   .form-grid{grid-template-columns:1fr}
   .code-layout{grid-template-columns:1fr}
   .panel-head-row{align-items:flex-start}
-  .panel-filter{width:100%}
+  .panel-filter{width:100%;flex-wrap:wrap} /* [v41] 버튼 줄바꿈 허용 */
   .panel-filter select{flex:1}
   .major-search-row{padding:0 14px 14px}
 
@@ -995,6 +997,10 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
               </sc-for>
             </sc-raw-select>
             <button class="btn primary" sc-camel-on-click="{{applyListMeeting}}"><svg width="13" height="13" sc-camel-view-box="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.4"></circle><path d="M10.3 10.3 14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg> 조회</button>
+            <!-- [v41] 엑셀다운 — 참석내역조회 탭에서만 -->
+            <sc-if value="{{isTabQuery}}" hint-placeholder-val="{{false}}">
+              <button class="btn" disabled="{{listExportDisabled}}" sc-camel-on-click="{{exportList}}"><svg width="13" height="13" sc-camel-view-box="0 0 16 16" fill="none"><path d="M8 2v8m0 0-3-3m3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path><path d="M2.5 12v1.5A1.5 1.5 0 0 0 4 15h8a1.5 1.5 0 0 0 1.5-1.5V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg> 엑셀다운</button>
+            </sc-if>
           </div>
         </div>
         <sc-if value="{{listNotShown}}" hint-placeholder-val="{{true}}">
@@ -1760,6 +1766,40 @@ class Component extends DCLogic {
     });
     var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
     var fileName = "출석현황_" + pivot.fileKey + "_" + pivot.yearLabel + "_" + pivot.ymd + ".csv";
+    try {
+      var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    } catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
+  }
+
+  // ── [v41] 참석내역조회 엑셀다운 — 조회된 전체 행, 화면과 같은 칸, 저장된 값 기준 ──
+  exportListCsv(label, rows) {
+    var self = this;
+    if (!label) { alert("조회 후 다운로드하세요."); return; }
+    if (this.state.bulkBusy) { alert("일괄 작업이 진행 중입니다. 완료 후 이용하세요."); return; }
+    if (!rows.length) { alert("다운로드할 참석기록이 없습니다."); return; }
+    if (this.changedList().length || this.state.editingRecordId) alert("저장하지 않은 변경은 파일에 포함되지 않습니다. 저장된 값으로 다운로드합니다.");
+    var backup = this.state.bulkBackup || {};
+    var rowBackup = this.state.editingRecordId ? this.state.recordEditBackup : null;
+    var now = new Date(), pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    var iso = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+    var out = [];
+    out.push(["전도대상자 참석·구원 현황 (" + label + ")", "", "기준일 " + iso]);
+    out.push(["구역", "인도자", "대상자", "관계", "집회년도", "집회월", "집회종류"].concat(DAY_DEFS.map(function (d) { return d[1]; })).concat(["구원시인", "상담인", "비고"]));
+    rows.forEach(function (r) {
+      // 체크 후 수정 중이거나 개별 수정 중인 행은 원래(저장된) 값을 사용
+      var src = backup[r.id] || (rowBackup && self.state.editingRecordId === r.id ? rowBackup : null) || { days: r.rawDays, saved: r.saved, counselor: r.counselor, note: r.note };
+      var z = /^0\d*$/.test(r.zone) ? '="' + r.zone + '"' : r.zone;
+      out.push([z, r.leader, r.target, r.relation, r.meetingYear, r.meetingMonth, r.meetingKindLabel]
+        .concat(DAY_DEFS.map(function (d) { return src.days && src.days[d[0]] ? "O" : ""; }))
+        .concat([src.saved || "", src.counselor || "", src.note || ""]));
+    });
+    var csv = "\uFEFF" + out.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
+    var fileName = "참석내역_" + label.replace(/\s+/g, "") + "_" + iso.replace(/-/g, "") + ".csv";
     try {
       var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       var url = URL.createObjectURL(blob);
@@ -2714,6 +2754,7 @@ class Component extends DCLogic {
         meetingMonth: mcx.monthLabel(r.meetingMonth),
         meetingKindLabel: mcx.kindLabel(r.meetingKind),
         dayCells: dayCells, saved: r.saved, counselor: r.counselor, note: r.note,
+        rawDays: r.days, // [v41] 엑셀다운용
         // [v24] 수정 버튼을 눌러야 편집 가능 — sac_attendance_record만 대상.
         isEditing: isEditing, isNotEditing: !isEditing,
         // [v39] 개별 편집/일괄 편집 구분 + 선택
@@ -2883,6 +2924,11 @@ class Component extends DCLogic {
       setListMeeting: function (e) { self.setListMeeting(e && e.target ? e.target.value : e); },
       applyListMeeting: function () { self.applyListMeeting(); },
       listShown: !!listMeeting,
+      // [v41] 참석내역조회 엑셀다운
+      listExportDisabled: !listMeeting || rows.length === 0 || this.state.bulkBusy,
+      exportList: function () {
+        self.exportListCsv(listMeeting ? mcx.yearLabel(listMeeting.year) + " " + mcx.monthLabel(listMeeting.month) + " " + mcx.kindLabel(listMeeting.kind) : "", rows);
+      },
       listNotShown: !listMeeting,
       listMeetingLabel: listMeeting ? mcx.yearLabel(listMeeting.year) + " " + mcx.monthLabel(listMeeting.month) + " " + mcx.kindLabel(listMeeting.kind) : "",
 
