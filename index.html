@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v42] 구원시인 입력칸 → 체크 버튼(체크=Y, 해제=빈 값, 기존 이름 값은 체크로 표시·유지), 명단·팝업·엑셀은 "O" 표시 -->
 <!-- [v41] 참석내역조회 탭: 조회 버튼 옆 엑셀다운(CSV, 조회된 전체 행, 화면과 같은 칸, 저장된 값 기준) -->
 <!-- [v40] 참석내역조회 탭: 체크하면 즉시 편집(일괄수정 버튼 제거), 해제 시 원래 값 복원, 행별 [수정] 제거·[삭제]만 유지 -->
 <!-- [v39] 참석내역조회 탭: 여러 행 선택 후 일괄수정(선택 행 동시 편집→일괄저장)·일괄삭제 -->
@@ -475,6 +476,8 @@ tr.selected td:first-child{box-shadow:inset 3px 0 0 #2f5fd1}
 .reg-table th.day-th,.reg-table td.day-th{text-align:center;width:38px}
 .daybtn{width:30px;height:28px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;color:#b3b8c4;font-weight:700;font-size:12px;cursor:pointer}
 .daybtn.on{background:#111b34;border-color:#111b34;color:#fff}
+.daybtn:disabled{cursor:default}
+.saved-td{text-align:center} /* [v42] 구원시인 체크 칸 */
 .cell-input{width:100%;min-width:92px;border:1px solid #e5e7eb;border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;background:#fff;color:#1f2430}
 .btn-link{background:none;border:0;color:#2f5fd1;font-size:12px;font-weight:600;cursor:pointer;padding:2px 4px}
 .btn-link.danger{color:#c0392b}
@@ -1028,7 +1031,7 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
                 <sc-raw-th class="stk c-zone">구역</sc-raw-th><sc-raw-th class="stk c-leader">인도자</sc-raw-th><sc-raw-th class="stk c-target">대상자</sc-raw-th><sc-raw-th>관계</sc-raw-th>
                 <sc-raw-th>집회년도</sc-raw-th><sc-raw-th>집회월</sc-raw-th><sc-raw-th>집회종류</sc-raw-th>
                 <sc-raw-th class="day-th">월</sc-raw-th><sc-raw-th class="day-th">화</sc-raw-th><sc-raw-th class="day-th">수</sc-raw-th><sc-raw-th class="day-th">목</sc-raw-th><sc-raw-th class="day-th">금</sc-raw-th><sc-raw-th class="day-th">토</sc-raw-th><sc-raw-th class="day-th">일</sc-raw-th>
-                <sc-raw-th>구원시인</sc-raw-th><sc-raw-th>상담인</sc-raw-th><sc-raw-th>비고</sc-raw-th><sc-raw-th class="stk c-act">관리</sc-raw-th>
+                <sc-raw-th class="saved-td">구원시인</sc-raw-th><sc-raw-th>상담인</sc-raw-th><sc-raw-th>비고</sc-raw-th><sc-raw-th class="stk c-act">관리</sc-raw-th>
               </sc-raw-tr>
             </sc-raw-thead>
             <sc-raw-tbody>
@@ -1051,7 +1054,8 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
                   <sc-for list="{{r.dayCells}}" as="d" hint-placeholder-count="7">
                     <sc-raw-td class="day-th"><button class="daybtn {{d.cls}}" disabled="{{!r.isEditing}}" sc-camel-on-click="{{d.toggle}}">{{d.mark}}</button></sc-raw-td>
                   </sc-for>
-                  <sc-raw-td><input class="cell-input" value="{{r.saved}}" disabled="{{!r.isEditing}}" sc-camel-on-change="{{r.setSaved}}" placeholder="{{r.phSaved}}"></sc-raw-td>
+                  <!-- [v42] 구원시인 체크 버튼 -->
+                  <sc-raw-td class="saved-td"><button class="daybtn {{r.savedCls}}" disabled="{{!r.isEditing}}" sc-camel-on-click="{{r.toggleSaved}}" aria-label="구원시인">{{r.savedMark}}</button></sc-raw-td>
                   <sc-raw-td><input class="cell-input" value="{{r.counselor}}" disabled="{{!r.isEditing}}" sc-camel-on-change="{{r.setCounselor}}" placeholder="{{r.phCounselor}}"></sc-raw-td>
                   <sc-raw-td><input class="cell-input" value="{{r.note}}" disabled="{{!r.isEditing}}" sc-camel-on-change="{{r.setNote}}" placeholder="{{r.phNote}}"></sc-raw-td>
                   <sc-raw-td class="stk c-act">
@@ -1748,7 +1752,7 @@ class Component extends DCLogic {
       .sort(function (a, b) { return String(a.leader).localeCompare(String(b.leader)) || String(a.target).localeCompare(String(b.target)); })
       .map(function (r, i) {
         return { no: String(i + 1), leader: r.leader || "-", target: r.target || "-", relation: r.relation || "-",
-          dayText: dayText(r) || "-", dayCountText: dayCount(r) + "일", saved: r.saved || "-", counselor: r.counselor || "-" };
+          dayText: dayText(r) || "-", dayCountText: dayCount(r) + "일", saved: r.saved ? "O" : "-", /* [v42] */ counselor: r.counselor || "-" };
       });
   }
 
@@ -1796,7 +1800,7 @@ class Component extends DCLogic {
       var z = /^0\d*$/.test(r.zone) ? '="' + r.zone + '"' : r.zone;
       out.push([z, r.leader, r.target, r.relation, r.meetingYear, r.meetingMonth, r.meetingKindLabel]
         .concat(DAY_DEFS.map(function (d) { return src.days && src.days[d[0]] ? "O" : ""; }))
-        .concat([src.saved || "", src.counselor || "", src.note || ""]));
+        .concat([src.saved ? "O" : "", src.counselor || "", src.note || ""])); // [v42] 구원시인 O
     });
     var csv = "\uFEFF" + out.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
     var fileName = "참석내역_" + label.replace(/\s+/g, "") + "_" + iso.replace(/-/g, "") + ".csv";
@@ -2359,7 +2363,7 @@ class Component extends DCLogic {
   isRowChanged(id) {
     var b = this.state.bulkBackup[id], r = this.rowById(id);
     if (!b || !r) return false;
-    if ((b.saved || "") !== (r.saved || "") || (b.counselor || "") !== (r.counselor || "") || (b.note || "") !== (r.note || "")) return true;
+    if (!!b.saved !== !!r.saved || (b.counselor || "") !== (r.counselor || "") || (b.note || "") !== (r.note || "")) return true;
     return DAY_DEFS.some(function (d) { return !!b.days[d[0]] !== !!r.days[d[0]]; });
   }
   changedList() { var self = this; return this.selectedList().filter(function (id) { return self.isRowChanged(id); }); }
@@ -2473,6 +2477,19 @@ class Component extends DCLogic {
       self.setState({ bulkBusy: false, bulkProgress: "", selectedIds: failed, bulkBackup: nb });
       alert("일괄삭제 완료 — 성공 " + (targets.length - failN) + "건 / 실패 " + failN + "건");
       return self.loadAll();
+    });
+  }
+
+  // [v42] 구원시인 체크 토글 — 편집 중인 행만. 체크=Y, 해제=빈 값.
+  // 기존에 이름이 저장돼 있던 행은 해제 후 다시 체크하면 원래 이름으로 되돌려 데이터가 바뀌지 않게 한다.
+  toggleSaved(id) {
+    if (!this.canEditRow(id)) return;
+    var b = (this.state.bulkBackup && this.state.bulkBackup[id]) || (this.state.editingRecordId === id ? this.state.recordEditBackup : null);
+    var orig = b && b.saved ? b.saved : "Y";
+    this.setState({
+      attendanceRows: this.state.attendanceRows.map(function (r) {
+        return r.id === id ? Object.assign({}, r, { saved: r.saved ? "" : orig }) : r;
+      })
     });
   }
 
@@ -2606,7 +2623,7 @@ class Component extends DCLogic {
       filtered = withCount.filter(function (r) { return !!r.saved; });
       statsRaw = [["구원 시인", String(filtered.length), "", "up"]];
       cols = ["이름", "구역", "관계", "구원시인", "상담인"];
-      rowMapper = function (r) { return [r.target, r.zone, r.relation || "-", r.saved, r.counselor || "-"]; };
+      rowMapper = function (r) { return [r.target, r.zone, r.relation || "-", r.saved ? "O" : "-", r.counselor || "-"]; }; // [v42]
     } else if (view === "주인참석") {
       title = "주일 참석 현황"; desc = "주일(일요일) 출석 기록이 있는 인원입니다.";
       filtered = withCount.filter(function (r) { return r.days.sun; });
@@ -2766,10 +2783,12 @@ class Component extends DCLogic {
         chkDisabled: !r.id || self.state.bulkBusy || !!self.state.editingRecordId,
         toggleCheck: function () { self.toggleSelect(r.id); },
         // [v37] 안내 글자는 편집 중인 행에만 표시
-        phSaved: isEditing ? "예: 고태준" : "", phCounselor: isEditing ? "상담인" : "", phNote: isEditing ? "비고" : "",
+        // [v42] 구원시인 체크 버튼
+        savedMark: r.saved ? "✓" : "", savedCls: r.saved ? "on" : "",
+        toggleSaved: function () { if (r.id) self.toggleSaved(r.id); },
+        phCounselor: isEditing ? "상담인" : "", phNote: isEditing ? "비고" : "",
         // [v25 — 참석자 행 수정] 상단 폼에서 지금 이 행을 수정 중이면 강조 표시.
         rowCls: (self.state.attendForm.editingAttendeeId === r.attendeeId ? "selected" : "") + (checked && self.state.attendTab === "query" ? " checked" : ""),
-        setSaved: function (e) { if (r.id) self.setRecordField(r.id, "saved", e && e.target ? e.target.value : e); },
         setCounselor: function (e) { if (r.id) self.setRecordField(r.id, "counselor", e && e.target ? e.target.value : e); },
         setNote: function (e) { if (r.id) self.setRecordField(r.id, "note", e && e.target ? e.target.value : e); },
         edit: function () { self.startEditRecord(r.id); },
