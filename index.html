@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v43] 구원시인 체크 표시 ✓ → O (요일 버튼과 동일) -->
 <!-- [v42] 구원시인 입력칸 → 체크 버튼(체크=Y, 해제=빈 값, 기존 이름 값은 체크로 표시·유지), 명단·팝업·엑셀은 "O" 표시 -->
 <!-- [v41] 참석내역조회 탭: 조회 버튼 옆 엑셀다운(CSV, 조회된 전체 행, 화면과 같은 칸, 저장된 값 기준) -->
 <!-- [v40] 참석내역조회 탭: 체크하면 즉시 편집(일괄수정 버튼 제거), 해제 시 원래 값 복원, 행별 [수정] 제거·[삭제]만 유지 -->
@@ -2784,7 +2785,7 @@ class Component extends DCLogic {
         toggleCheck: function () { self.toggleSelect(r.id); },
         // [v37] 안내 글자는 편집 중인 행에만 표시
         // [v42] 구원시인 체크 버튼
-        savedMark: r.saved ? "✓" : "", savedCls: r.saved ? "on" : "",
+        savedMark: r.saved ? "O" : "" /* [v43] */, savedCls: r.saved ? "on" : "",
         toggleSaved: function () { if (r.id) self.toggleSaved(r.id); },
         phCounselor: isEditing ? "상담인" : "", phNote: isEditing ? "비고" : "",
         // [v25 — 참석자 행 수정] 상단 폼에서 지금 이 행을 수정 중이면 강조 표시.
