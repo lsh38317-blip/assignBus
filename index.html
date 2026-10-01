@@ -3,6 +3,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v48] 총괄 메뉴를 피벗표로 전환 — 집회마다 지표 5칸(하루이상·5일이상·죄/복음·구원시인·주일참석) 2단 머리행, 5지표 모두 0인 집회 제외, 엑셀 2단 머리행 -->
+<!-- [v47] 죄/복음 메뉴를 피벗표로 전환(집회별 죄/복음 기준일수 이상 참석한 사람 대상) -->
+<!-- [v46] 메뉴명 주일참석→주일참석, 주일참석 메뉴를 피벗표로 전환(일요일 체크된 사람 대상) -->
+<!-- [v45] 구원시인 메뉴를 피벗표로 전환(구원시인 체크된 사람 대상, 참석일수 무관, 이전 이름 값 포함) -->
+<!-- [v44] 하루이상·5일이상 피벗표에서 총합계 0인 집회 열("월+집회종류") 제외, 엑셀다운도 동일 -->
 <!-- [v43] 구원시인 체크 표시 ✓ → O (요일 버튼과 동일) -->
 <!-- [v42] 구원시인 입력칸 → 체크 버튼(체크=Y, 해제=빈 값, 기존 이름 값은 체크로 표시·유지), 명단·팝업·엑셀은 "O" 표시 -->
 <!-- [v41] 참석내역조회 탭: 조회 버튼 옆 엑셀다운(CSV, 조회된 전체 행, 화면과 같은 칸, 저장된 값 기준) -->
@@ -602,6 +607,17 @@ table.pv tr.pv-total td:first-child{background:#dfe7f8}
 table.pv td.pv-lk{color:#2f5fd1;font-weight:700;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 table.pv td.pv-lk:hover{background:#e6edfb}
 table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
+/* [v48] 총괄 피벗표 — 2단 머리행, 집회 묶음 구분선, 머리행·구역 칸 고정 */
+.pv-scroll.pv-sum-wrap{overflow:auto;max-height:calc(100vh - 270px);min-height:240px;margin:0 18px;padding:0;border:1px solid #cfd6e4;border-radius:8px}
+table.pv.pv-sum-tbl{overflow:visible;border:0;border-radius:0}
+table.pv.pv-sum-tbl thead th{position:sticky;z-index:2;background:#111b34}
+table.pv.pv-sum-tbl thead tr:first-child th{top:0;height:34px}
+table.pv.pv-sum-tbl thead tr:nth-child(2) th{top:34px;font-size:11px;min-width:56px;padding:6px 6px;background:#1d2c52}
+table.pv.pv-sum-tbl thead th.pv-corner{left:0;z-index:4;font-size:12.5px}
+table.pv.pv-sum-tbl tbody td:first-child{z-index:1}
+table.pv.pv-sum-tbl tbody td{padding:7px 6px}
+table.pv.pv-sum-tbl .pv-gs{border-left:2px solid #8fa0c6}
+table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
 /* 상세 팝업(보기 전용) */
 .pv-modal-backdrop{position:fixed;inset:0;background:rgba(10,13,26,.45);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
 .pv-modal{background:#fff;border-radius:12px;width:100%;max-width:760px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.3);overflow:hidden}
@@ -614,6 +630,7 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
 
 @media (max-width: 900px){
   .pv-scroll{padding:0 10px}
+  .pv-scroll.pv-sum-wrap{margin:0 10px;padding:0;max-height:70vh} /* [v48] */
   .pv-title{padding:0 12px 8px}
   .pv-title h2{font-size:16px}
   .pv-modal{max-height:88vh}
@@ -672,7 +689,7 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
 
   <main class="main">
     <!-- [v26 — 하루이상 피벗표] 하루이상 메뉴는 엑셀 "참석현황(하루이상)" 형태의 피벗표로 대체.
-         나머지 대시보드 메뉴(총괄/5일이상/죄복음/구원시인/주인참석)는 아래 기존 블록(isLegacyDash) 그대로. -->
+         나머지 대시보드 메뉴(총괄/5일이상/죄복음/구원시인/주일참석)는 아래 기존 블록(isLegacyDash) 그대로. -->
     <sc-if value="{{isPivotView}}" hint-placeholder-val="{{false}}">
       <div class="headline">
         <div>
@@ -700,7 +717,7 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
 
       <div class="panel pv-panel">
         <!-- [v29] 표 위 제목("참석현황 (하루이상)")·기준일 표시 제거 — 두 값은 CSV 첫 줄에만 사용 -->
-        <sc-if value="{{pivot.hasRows}}" hint-placeholder-val="{{true}}">
+        <sc-if value="{{pivotSingleRows}}" hint-placeholder-val="{{true}}">
           <div class="pv-scroll">
             <sc-raw-table class="pv">
               <sc-raw-thead>
@@ -726,6 +743,37 @@ table.pv td.pv-hit,table.pv tbody tr:hover td.pv-hit{background:#dbe7ff}
             </sc-raw-table>
           </div>
           <div class="empty-note">파란 밑줄 숫자를 누르면 해당 구역·집회의 참석자 명단을 볼 수 있습니다.</div>
+        </sc-if>
+        <!-- [v48] 총괄 — 집회마다 지표 5칸, 2단 머리행 -->
+        <sc-if value="{{pivotSumRows}}" hint-placeholder-val="{{false}}">
+          <div class="pv-scroll pv-sum-wrap">
+            <sc-raw-table class="pv pv-sum-tbl">
+              <sc-raw-thead>
+                <sc-raw-tr>
+                  <sc-raw-th class="pv-corner" sc-camel-row-span="2">구역</sc-raw-th>
+                  <sc-for list="{{pivot.groups}}" as="g" hint-placeholder-count="3">
+                    <sc-raw-th class="pv-gs" sc-camel-col-span="{{g.span}}">{{g.month}} {{g.kind}}</sc-raw-th>
+                  </sc-for>
+                </sc-raw-tr>
+                <sc-raw-tr>
+                  <sc-for list="{{pivot.subHeads}}" as="h" hint-placeholder-count="10">
+                    <sc-raw-th class="{{h.cls}}">{{h.text}}</sc-raw-th>
+                  </sc-for>
+                </sc-raw-tr>
+              </sc-raw-thead>
+              <sc-raw-tbody>
+                <sc-for list="{{pivot.lines}}" as="ln" hint-placeholder-count="8">
+                  <sc-raw-tr class="{{ln.cls}}">
+                    <sc-raw-td>{{ln.zoneLabel}}</sc-raw-td>
+                    <sc-for list="{{ln.cells}}" as="c" hint-placeholder-count="10">
+                      <sc-raw-td class="{{c.cls}}" sc-camel-on-click="{{c.click}}">{{c.text}}</sc-raw-td>
+                    </sc-for>
+                  </sc-raw-tr>
+                </sc-for>
+              </sc-raw-tbody>
+            </sc-raw-table>
+          </div>
+          <div class="empty-note">파란 밑줄 숫자를 누르면 해당 구역·집회·항목의 명단을 볼 수 있습니다.</div>
         </sc-if>
         <!-- [v34] 집회는 있으나 기준을 통과한 참석자가 없을 때 -->
         <sc-if value="{{pivot.noRows}}" hint-placeholder-val="{{false}}">
@@ -1349,7 +1397,7 @@ function callGatewayFull(action, sheetName, extra) {
   });
 }
 
-var MENU_KEYS = ["총괄", "하루이상", "5일이상", "죄/복음", "구원시인", "주인참석"];
+var MENU_KEYS = ["총괄", "하루이상", "5일이상", "죄/복음", "구원시인", "주일참석"]; // [v46] 주일참석 → 주일참석
 var DAY_DEFS = [["mon", "월"], ["tue", "화"], ["wed", "수"], ["thu", "목"], ["fri", "금"], ["sat", "토"], ["sun", "일"]];
 
 // ===== [v26 — 피벗 공통함수] =====
@@ -1358,7 +1406,7 @@ var DAY_DEFS = [["mon", "월"], ["tue", "화"], ["wed", "수"], ["thu", "목"], 
 //   '5일이상':  pass: dayCount(row) >= meeting.longStd   (그 집회의 5일이상 기준일수)
 //   '죄/복음':  pass: dayCount(row) >= meeting.gospelStd (그 집회의 죄/복음 기준일수)
 //   '구원시인': pass: !!row.saved
-//   '주인참석': pass: row.days.sun
+//   '주일참석': pass: row.days.sun
 // [v33] label/headTitle/headDesc 추가, '5일이상' 규칙 추가(집회마다 등록된 5일이상 기준일수로 판정)
 var PIVOT_RULES = {
   "하루이상": { title: "참석현황 (하루이상)", fileKey: "하루이상", label: "하루이상",
@@ -1366,8 +1414,29 @@ var PIVOT_RULES = {
     pass: function (row, mt) { return dayCount(row) >= 1; } },
   "5일이상": { title: "참석현황 (5일이상)", fileKey: "5일이상", label: "5일이상",
     headTitle: "5일이상 참석자", headDesc: "집회별·구역별로 기준일수 이상 참석한 인원을 집계합니다.",
-    pass: function (row, mt) { return dayCount(row) >= longStdOf(mt); } }
+    pass: function (row, mt) { return dayCount(row) >= longStdOf(mt); } },
+  // [v45] 구원시인 — 체크(Y) 또는 v42 이전 이름 값이 있으면 대상. 참석일수는 보지 않음
+  "구원시인": { title: "구원시인 현황", fileKey: "구원시인", label: "구원시인",
+    headTitle: "구원시인 현황", headDesc: "집회별·구역별로 구원시인으로 체크된 인원을 집계합니다.",
+    pass: function (row, mt) { return !!row.saved; } },
+  // [v46] 주일참석 — 참석요일 "일"에 체크된 사람 (다른 요일은 보지 않음)
+  "주일참석": { title: "주일참석 현황", fileKey: "주일참석", label: "주일참석",
+    headTitle: "주일참석 현황", headDesc: "집회별·구역별로 일요일에 참석한 인원을 집계합니다.",
+    pass: function (row, mt) { return !!(row.days && row.days.sun); } },
+  // [v47] 죄/복음 — 참석일수 >= 그 집회의 죄/복음 기준일수 (예: 대집회 5일 → 5·6·7일 참석자)
+  "죄/복음": { title: "죄/복음 현황", fileKey: "죄복음", label: "죄/복음",
+    headTitle: "죄/복음 현황", headDesc: "집회별·구역별로 죄/복음 기준일수 이상 참석한 인원을 집계합니다.",
+    pass: function (row, mt) { return dayCount(row) >= gospelStdOf(mt); } }
 };
+// [v48] 총괄 지표 — 기존 메뉴별 판정규칙 재사용, 머리글은 메뉴명과 동일
+var SUMMARY_METRICS = ["하루이상", "5일이상", "죄/복음", "구원시인", "주일참석"];
+var SUMMARY_HEAD = { title: "출석현황 총괄", fileKey: "총괄",
+  headTitle: "출석현황 총괄", headDesc: "집회별·구역별로 하루이상·5일이상·죄/복음·구원시인·주일참석 인원을 한 표에서 집계합니다." };
+// [v47] 집회의 죄/복음 기준일수 — 집회정보 등록값 사용, 값이 없거나 0이면 3일(등록화면 기본값)
+function gospelStdOf(mt) {
+  var n = mt ? parseInt(mt.gospelStd, 10) : 0;
+  return n > 0 ? n : 3;
+}
 // [v33] 집회의 5일이상 기준일수 — 값이 없거나 0이면 5일
 function longStdOf(mt) {
   var n = mt ? parseInt(mt.longStd, 10) : 0;
@@ -1615,7 +1684,7 @@ class Component extends DCLogic {
   setPivotKind(val) { this.setState({ pivotKind: val }); }
   applyPivot() { this.setState({ pivotApplied: { year: this.state.pivotYear, kind: this.state.pivotKind }, pivotDrill: null }); }
   resetPivot() { this.setState({ pivotYear: "", pivotKind: "", pivotApplied: { year: "", kind: "" }, pivotDrill: null }); }
-  openPivotDrill(zone, meetingId) { this.setState({ pivotDrill: { zone: zone, meetingId: meetingId } }); }
+  openPivotDrill(zone, meetingId, metric) { this.setState({ pivotDrill: { zone: zone, meetingId: meetingId, metric: metric || "" } }); } // [v48] metric = 총괄 지표 키
   closePivotDrill() { this.setState({ pivotDrill: null }); }
 
   // [v26] 공통코드 이름 조회 헬퍼 — 코드값 → 명칭 (없으면 코드 그대로)
@@ -1686,6 +1755,16 @@ class Component extends DCLogic {
       if (!zoneMap[zone]) zoneMap[zone] = columns.map(function () { return 0; });
       if (rule.pass(r, columns[idx].meeting)) zoneMap[zone][idx]++;
     });
+    // [v44] 총합계 0인 집회 열(월+집회종류) 제외 — 열 제거 후 구역·소계·총합계·엑셀다운 모두 남은 열 기준
+    var allColCount = columns.length;
+    var keepCol = columns.map(function (c, i) {
+      return Object.keys(zoneMap).some(function (z) { return zoneMap[z][i] > 0; });
+    });
+    columns = columns.filter(function (c, i) { return keepCol[i]; });
+    Object.keys(zoneMap).forEach(function (z) {
+      zoneMap[z] = zoneMap[z].filter(function (n, i) { return keepCol[i]; });
+    });
+
     // [v34] 계가 0인 구역 제외 — 교구의 모든 구역이 빠지면 그 교구 소계도 생기지 않음
     var zones = Object.keys(zoneMap).filter(function (z) {
       return zoneMap[z].reduce(function (a, b) { return a + b; }, 0) > 0;
@@ -1732,10 +1811,10 @@ class Component extends DCLogic {
       isoDate: now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate()),
       ymd: "" + now.getFullYear() + pad2(now.getMonth() + 1) + pad2(now.getDate()),
       columns: columns, lines: lines,
-      hasColumns: columns.length > 0, noColumns: columns.length === 0,
+      hasColumns: allColCount > 0, noColumns: allColCount === 0, // [v44] 원래 열 수 기준(집회 미등록 안내)
       // [v34] 표시할 구역 유무
-      hasRows: columns.length > 0 && zones.length > 0,
-      noRows: columns.length > 0 && zones.length === 0
+      hasRows: columns.length > 0 && zones.length > 0, // [v44] 남은 열 기준
+      noRows: allColCount > 0 && (columns.length === 0 || zones.length === 0)
     };
   }
 
@@ -1757,17 +1836,119 @@ class Component extends DCLogic {
       });
   }
 
+  // [v48] 총괄 피벗 — 구역 × 집회 × 지표(5) 집계, 5지표 모두 0인 집회 묶음·모든 칸 0인 구역 제외, 교구 소계·총합계
+  buildSummaryPivot(yearCode, kindCode, ctx) {
+    var self = this;
+    var drill = this.state.pivotDrill;
+    var now = new Date();
+    var M = SUMMARY_METRICS.length;
+
+    // ① 집회 묶음: 선택 연도(+집회종류), 월 → 집회종류 순 (buildPivot과 동일)
+    var groups = this.state.meetings
+      .filter(function (m) { return ctx.toCode("year", m.year) === yearCode && (!kindCode || ctx.toCode("kind", m.kind) === kindCode); })
+      .map(function (m) {
+        return { meetingId: m.id, meeting: m, key: ctx.normKey(m.year, m.month, m.kind), kindCode: ctx.toCode("kind", m.kind) || String(m.kind),
+          monthNo: stripUnit(ctx.monthLabel(m.month)), month: ctx.monthLabel(m.month), kind: ctx.kindLabel(m.kind), span: String(M) };
+      })
+      .sort(function (a, b) { return (a.monthNo - b.monthNo) || a.kindCode.localeCompare(b.kindCode); });
+    var allGroupCount = groups.length;
+    var idxByKey = {};
+    groups.forEach(function (g, i) { if (idxByKey[g.key] === undefined) idxByKey[g.key] = i; });
+
+    // ② 판정 → zoneMap[zone][묶음][지표]
+    function emptyCounts(n) { var a = []; for (var i = 0; i < n; i++) { var r = []; for (var j = 0; j < M; j++) r.push(0); a.push(r); } return a; }
+    var zoneMap = {};
+    this.state.attendanceRows.forEach(function (r) {
+      var gi = idxByKey[ctx.normKey(r.meetingYear, r.meetingMonth, r.meetingKind)];
+      if (gi === undefined) return;
+      var zone = String(r.zone || "").trim();
+      if (!zoneMap[zone]) zoneMap[zone] = emptyCounts(groups.length);
+      SUMMARY_METRICS.forEach(function (mk, j) {
+        if (PIVOT_RULES[mk].pass(r, groups[gi].meeting)) zoneMap[zone][gi][j]++;
+      });
+    });
+
+    // ③ 5지표 합계가 모두 0인 집회 묶음 제외
+    var keepG = groups.map(function (g, gi) {
+      return Object.keys(zoneMap).some(function (z) { return zoneMap[z][gi].some(function (n) { return n > 0; }); });
+    });
+    groups = groups.filter(function (g, gi) { return keepG[gi]; });
+    Object.keys(zoneMap).forEach(function (z) { zoneMap[z] = zoneMap[z].filter(function (c, gi) { return keepG[gi]; }); });
+
+    // ④ 모든 칸이 0인 구역 제외
+    function anyPos(z) { return zoneMap[z].some(function (c) { return c.some(function (n) { return n > 0; }); }); }
+    var zones = Object.keys(zoneMap).filter(anyPos).sort(compareZone);
+
+    // ⑤ 구역 행 + 교구 소계 + 총합계
+    function flat(counts) { var o = []; counts.forEach(function (c) { c.forEach(function (n) { o.push(n); }); }); return o; }
+    function gs(k) { return k % M === 0 ? "pv-gs" : ""; }
+    function sumLine(counts, type, label, cls) {
+      return { type: type, cls: cls, zoneLabel: label,
+        cells: flat(counts).map(function (n, k) { return { text: String(n), cls: gs(k) }; }) };
+    }
+    var lines = [], groupSum = null, curGroup = null;
+    var grand = emptyCounts(groups.length);
+    function addTo(acc, counts) { counts.forEach(function (c, gi) { c.forEach(function (n, j) { acc[gi][j] += n; }); }); }
+    zones.forEach(function (zone) {
+      var g = zoneGroupKey(zone);
+      if (curGroup !== null && g !== curGroup) {
+        lines.push(sumLine(groupSum, "sub", curGroup === "Z" ? "기타 소계" : curGroup + "교구 소계", "pv-sub")); groupSum = null;
+      }
+      curGroup = g;
+      if (!groupSum) groupSum = emptyCounts(groups.length);
+      var counts = zoneMap[zone];
+      addTo(groupSum, counts); addTo(grand, counts);
+      var cells = [];
+      counts.forEach(function (c, gi) {
+        c.forEach(function (n, j) {
+          var k = gi * M + j;
+          if (!n) { cells.push({ text: "", cls: gs(k) }); return; }
+          var mid = groups[gi].meetingId, mk = SUMMARY_METRICS[j];
+          var hit = drill && drill.zone === zone && drill.meetingId === mid && drill.metric === mk;
+          cells.push({ text: String(n), cls: "pv-lk" + (hit ? " pv-hit" : "") + (gs(k) ? " pv-gs" : ""),
+            click: function () { self.openPivotDrill(zone, mid, mk); } });
+        });
+      });
+      lines.push({ type: "zone", cls: "", zone: zone, zoneLabel: zone || "(미지정)", cells: cells });
+    });
+    if (groupSum) lines.push(sumLine(groupSum, "sub", curGroup === "Z" ? "기타 소계" : curGroup + "교구 소계", "pv-sub"));
+    lines.push(sumLine(grand, "total", "총합계(명)", "pv-total"));
+
+    var subHeads = [];
+    groups.forEach(function () { SUMMARY_METRICS.forEach(function (mk, j) { subHeads.push({ text: PIVOT_RULES[mk].label, cls: j === 0 ? "pv-gs" : "" }); }); });
+
+    return {
+      isSummary: true, title: SUMMARY_HEAD.title, fileKey: SUMMARY_HEAD.fileKey,
+      yearLabel: ctx.yearName(yearCode),
+      isoDate: now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate()),
+      ymd: "" + now.getFullYear() + pad2(now.getMonth() + 1) + pad2(now.getDate()),
+      groups: groups, columns: groups, subHeads: subHeads, lines: lines,
+      hasColumns: allGroupCount > 0, noColumns: allGroupCount === 0,
+      hasRows: groups.length > 0 && zones.length > 0,
+      noRows: allGroupCount > 0 && (groups.length === 0 || zones.length === 0)
+    };
+  }
+
   // [v26] CSV 다운로드 — 화면 표 순서 그대로(제목·기준일 행, 헤더, 구역/소계, 총합계), UTF-8 BOM
   exportPivotCsv(pivot) {
     if (!pivot || !pivot.hasColumns) { alert("조회된 집회가 없습니다."); return; }
     if (!pivot.hasRows) { alert("조건에 해당하는 참석자가 없습니다."); return; } // [v34]
     var rows = [];
     rows.push([pivot.title, "", "기준일 " + pivot.isoDate]);
-    rows.push(["구역", "계"].concat(pivot.columns.map(function (c) { return c.month + " " + c.kind; })));
+    if (pivot.isSummary) {
+      // [v48] 총괄 — 2단 머리행: 1행 집회명(묶음 첫 칸), 2행 지표명
+      var h1 = ["구역"], h2 = [""];
+      pivot.groups.forEach(function (g) {
+        SUMMARY_METRICS.forEach(function (mk, j) { h1.push(j === 0 ? g.month + " " + g.kind : ""); h2.push(PIVOT_RULES[mk].label); });
+      });
+      rows.push(h1); rows.push(h2);
+    } else {
+      rows.push(["구역", "계"].concat(pivot.columns.map(function (c) { return c.month + " " + c.kind; })));
+    }
     pivot.lines.forEach(function (ln) {
       // 00·01 같은 앞자리 0 구역이 엑셀에서 숫자(0,1)로 바뀌지 않도록 ="00" 형식으로 저장
       var z = /^0\d*$/.test(ln.zoneLabel) ? '="' + ln.zoneLabel + '"' : ln.zoneLabel;
-      rows.push([z, ln.totalText].concat(ln.cells.map(function (c) { return c.text; })));
+      rows.push((pivot.isSummary ? [z] : [z, ln.totalText]).concat(ln.cells.map(function (c) { return c.text; })));
     });
     var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
     var fileName = "출석현황_" + pivot.fileKey + "_" + pivot.yearLabel + "_" + pivot.ymd + ".csv";
@@ -2580,7 +2761,7 @@ class Component extends DCLogic {
   // ── 대시보드 6개 메뉴: 실제 출석 데이터로 집계 ──
   // 주의: 현재 스키마엔 "죄/복음"과 "구원시인"을 구분하는 별도 컬럼이 없어
   //       두 메뉴 모두 attendance_record.gospel_confessor 존재 여부로 집계합니다.
-  //       "주인참석"(정착 여부)도 별도 데이터가 없어 주일(sun) 출석 여부로 근사했습니다.
+  //       "주일참석"(정착 여부)도 별도 데이터가 없어 주일(sun) 출석 여부로 근사했습니다.
   //       정확한 정의가 필요하면 컬럼 추가 후 이 함수만 다시 손보면 됩니다.
   buildDash(view) {
     var self = this;
@@ -2625,7 +2806,7 @@ class Component extends DCLogic {
       statsRaw = [["구원 시인", String(filtered.length), "", "up"]];
       cols = ["이름", "구역", "관계", "구원시인", "상담인"];
       rowMapper = function (r) { return [r.target, r.zone, r.relation || "-", r.saved ? "O" : "-", r.counselor || "-"]; }; // [v42]
-    } else if (view === "주인참석") {
+    } else if (view === "주일참석") { // [v46] 미사용 — 피벗표로 전환됨
       title = "주일 참석 현황"; desc = "주일(일요일) 출석 기록이 있는 인원입니다.";
       filtered = withCount.filter(function (r) { return r.days.sun; });
       statsRaw = [["주일 참석", String(filtered.length), "", "up"]];
@@ -2822,23 +3003,29 @@ class Component extends DCLogic {
 
     // ── [v26 — 하루이상 피벗표] / [v33] 5일이상도 동일 피벗표 사용 ──
     // 메뉴 전환 시 resetPivot()으로 조회조건이 초기화(빈 값)되며, 빈 값은 기본값(현재년도·전체 집회종류)으로 해석한다.
-    var isPivotView = !!PIVOT_RULES[view]; // [v33]
-    var pivotRule = isPivotView ? PIVOT_RULES[view] : null;
+    var isSummaryView = view === "총괄"; // [v48]
+    var isPivotView = !!PIVOT_RULES[view] || isSummaryView; // [v33] [v48]
+    var pivotRule = PIVOT_RULES[view] || null;
+    var headRule = pivotRule || (isSummaryView ? SUMMARY_HEAD : null);
     var ctx = this.codeCtx();
     var thisYear = String(new Date().getFullYear());
     var curYearOpt = ctx.yearList.filter(function (mn) { return String(stripUnit(mn.name)) === thisYear; })[0] || ctx.yearList[0];
     var defaultPivotYear = curYearOpt ? curYearOpt.code : "";
     var appliedYear = this.state.pivotApplied.year || defaultPivotYear;
     var appliedKind = this.state.pivotApplied.kind || "";
-    var pivot = isPivotView
+    var pivot = isSummaryView
+      ? this.buildSummaryPivot(appliedYear, appliedKind, ctx)
+      : pivotRule
       ? this.buildPivot(view, appliedYear, appliedKind, ctx)
       : { title: "", dateLabel: "", columns: [], lines: [], hasColumns: false, noColumns: false, hasRows: false, noRows: false };
     var drillState = this.state.pivotDrill;
     var drillCol = (isPivotView && drillState) ? pivot.columns.filter(function (c) { return c.meetingId === drillState.meetingId; })[0] : null;
-    var drillRows = drillCol ? this.getPivotCellRows(view, drillState.zone, drillState.meetingId) : [];
+    var drillKey = drillState ? (drillState.metric || view) : view; // [v48] 총괄은 클릭한 지표 규칙
+    if (drillCol && !PIVOT_RULES[drillKey]) drillCol = null;
+    var drillRows = drillCol ? this.getPivotCellRows(drillKey, drillState.zone, drillState.meetingId) : [];
     var pivotDrill = {
       title: drillCol
-        ? (drillState.zone || "(미지정)") + "구역 · " + ctx.yearLabel(drillCol.meeting.year) + " " + drillCol.month + " " + drillCol.kind + " · " + pivotRule.label + " " + drillRows.length + "명"
+        ? (drillState.zone || "(미지정)") + "구역 · " + ctx.yearLabel(drillCol.meeting.year) + " " + drillCol.month + " " + drillCol.kind + " · " + PIVOT_RULES[drillKey].label + " " + drillRows.length + "명"
         : "",
       rows: drillRows
     };
@@ -2857,7 +3044,9 @@ class Component extends DCLogic {
       isLegacyDash: isDashboard && !isPivotView,
       isPivotView: isPivotView,
       pivot: pivot,
-      pivotHead: { title: pivotRule ? pivotRule.headTitle : "", desc: pivotRule ? pivotRule.headDesc : "" },
+      pivotHead: { title: headRule ? headRule.headTitle : "", desc: headRule ? headRule.headDesc : "" },
+      pivotSingleRows: !isSummaryView && pivot.hasRows, // [v48]
+      pivotSumRows: isSummaryView && pivot.hasRows,
       pivotYearOptions: ctx.yearList.map(function (mn) { return { value: mn.code, label: mn.name }; }),
       pivotKindOptions: ctx.kindList.map(function (mn) { return { value: mn.code, label: mn.name }; }),
       pivotYearValue: this.state.pivotYear || defaultPivotYear,
