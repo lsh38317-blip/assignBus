@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v50] 모바일 참석내역 표 세로 스크롤 시 인도자·대상자 머리글이 밀려 올라가던 문제 수정(머리글 위쪽 고정 유지) -->
 <!-- [v49] 지난 집회(현재 월 이전) 참석내역은 조회만(체크·수정·삭제 차단, 엑셀다운 허용), 개별등록 탭 하단 집회 콤보 = 등록 콤보(현재·이후) -->
 <!-- [v48] 총괄 메뉴를 피벗표로 전환 — 집회마다 지표 5칸(하루이상·5일이상·죄/복음·구원시인·주일참석) 2단 머리행, 5지표 모두 0인 집회 제외, 엑셀 2단 머리행 -->
 <!-- [v47] 죄/복음 메뉴를 피벗표로 전환(집회별 죄/복음 기준일수 이상 참석한 사람 대상) -->
@@ -580,7 +581,10 @@ input.csv-hidden{display:none}
   /* [v38] 좁은 화면: 콤보는 한 줄 전체, 버튼·파일명은 다음 줄 */
   .csv-row{flex-wrap:wrap}
   .csv-meeting{flex:1 1 calc(100% - 70px);width:auto}
-  .reg-table .c-leader,.reg-table .c-target{position:static;box-shadow:none}
+  /* [v50] 고정 해제는 본문 칸만 — 머리글은 위쪽 고정 유지(가로 스크롤 시엔 함께 이동) */
+  .reg-table td.c-leader,.reg-table td.c-target{position:static;box-shadow:none}
+  .reg-table thead th.c-leader,.reg-table thead th.c-target,
+  .reg-table.has-chk thead th.c-leader,.reg-table.has-chk thead th.c-target{position:sticky;top:0;left:auto;z-index:2;box-shadow:none}
   table{font-size:12.5px}
 }
 
