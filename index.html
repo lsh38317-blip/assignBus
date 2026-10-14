@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v56] 집회정보 강사(instructor_name) 항목 추가 — 직접 입력·선택, 집회 이름(콤보·목록 제목·피벗 머리글·팝업·엑셀 안)에 강사 표시, 엑셀 파일명은 제외 -->
 <!-- [v55] CSV 일괄등록에 월~일·구원시인·상담인·비고 항목 추가(요일·구원시인은 O o 0 ○ V v Y y 1 이면 Y), 빈 줄 제외, 미리보기 요일 7칸 -->
 <!-- [v54] Safari 다운로드 오류(WebKitBlobResource 오류 1) 수정 — 공통 다운로드 함수, 파일 내용 해제를 1초→60초 후로 -->
 <!-- [v53] 집회년도·집회월 콤보 숫자 오름차순 정렬, 일괄등록(CSV) 탭에서 지난 집회 선택 허용(등록 전 추가 확인) -->
@@ -645,6 +646,7 @@ table.pv.pv-sum-tbl tbody td:first-child{z-index:1}
 table.pv.pv-sum-tbl tbody td{padding:7px 6px}
 table.pv.pv-sum-tbl .pv-gs{border-left:2px solid #8fa0c6}
 table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
+.pv-inst{font-weight:500;color:#c9d3ea;font-size:11px} /* [v56] 피벗 머리글 강사 */
 /* 상세 팝업(보기 전용) */
 .pv-modal-backdrop{position:fixed;inset:0;background:rgba(10,13,26,.45);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
 .pv-modal{background:#fff;border-radius:12px;width:100%;max-width:760px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.3);overflow:hidden}
@@ -752,7 +754,7 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
                   <sc-raw-th>구역</sc-raw-th>
                   <sc-raw-th>계</sc-raw-th>
                   <sc-for list="{{pivot.columns}}" as="col" hint-placeholder-count="8">
-                    <sc-raw-th>{{col.month}}<br>{{col.kind}}</sc-raw-th>
+                    <sc-raw-th>{{col.month}}<br>{{col.kind}}<sc-if value="{{col.hasInstructor}}" hint-placeholder-val="{{false}}"><br><span class="pv-inst">{{col.instructor}}</span></sc-if></sc-raw-th>
                   </sc-for>
                 </sc-raw-tr>
               </sc-raw-thead>
@@ -779,7 +781,7 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
                 <sc-raw-tr>
                   <sc-raw-th class="pv-corner" sc-camel-row-span="2">구역</sc-raw-th>
                   <sc-for list="{{pivot.groups}}" as="g" hint-placeholder-count="3">
-                    <sc-raw-th class="pv-gs" sc-camel-col-span="{{g.span}}">{{g.month}} {{g.kind}}</sc-raw-th>
+                    <sc-raw-th class="pv-gs" sc-camel-col-span="{{g.span}}">{{g.head}}</sc-raw-th>
                   </sc-for>
                 </sc-raw-tr>
                 <sc-raw-tr>
@@ -1228,6 +1230,11 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
               <label>죄/복음 기준일수</label>
               <input type="number" min="1" value="{{meetingForm.gospelStd}}" sc-camel-on-change="{{meetingForm.setGospelStd}}" placeholder="예: 3">
             </div>
+            <!-- [v56] 강사 — 선택 입력 -->
+            <div class="field">
+              <label>강사</label>
+              <input type="text" maxlength="100" value="{{meetingForm.instructor}}" sc-camel-on-change="{{meetingForm.setInstructor}}" placeholder="예: 홍길동 목사 (선택)">
+            </div>
           </div>
           <div class="form-actions">
             <button class="btn" sc-camel-on-click="{{resetMeetingForm}}">취소</button>
@@ -1261,6 +1268,7 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
                 <sc-raw-th>집회년도</sc-raw-th>
                 <sc-raw-th>집회월</sc-raw-th>
                 <sc-raw-th>집회 종류</sc-raw-th>
+                <sc-raw-th>강사</sc-raw-th>
                 <sc-raw-th>집회일수</sc-raw-th>
                 <sc-raw-th>5일이상 기준일수</sc-raw-th>
                 <sc-raw-th>죄/복음 기준일수</sc-raw-th>
@@ -1273,6 +1281,7 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
                   <sc-raw-td>{{m.year}}</sc-raw-td>
                   <sc-raw-td>{{m.month}}</sc-raw-td>
                   <sc-raw-td>{{m.kind}}</sc-raw-td>
+                  <sc-raw-td>{{m.instructor}}</sc-raw-td>
                   <sc-raw-td>{{m.days}}</sc-raw-td>
                   <sc-raw-td>{{m.longStd}}일</sc-raw-td>
                   <sc-raw-td>{{m.gospelStd}}일</sc-raw-td>
@@ -1544,8 +1553,14 @@ function mapMeeting(row) {
     kind: row.meeting_kind,
     days: String(row.meeting_days) + "일",
     longStd: String(row.long_attend_std),
-    gospelStd: String(row.gospel_std)
+    gospelStd: String(row.gospel_std),
+    instructor: row.instructor_name == null ? "" : String(row.instructor_name).trim() // [v56]
   };
+}
+// [v56] 집회 이름에 강사 붙이기 — 강사가 있을 때만 " (강사)"
+function withInstructor(label, mt) {
+  var t = mt && mt.instructor ? String(mt.instructor).trim() : "";
+  return t ? label + " (" + t + ")" : label;
 }
 function meetingFormToRow(f) {
   return {
@@ -1554,7 +1569,8 @@ function meetingFormToRow(f) {
     meeting_kind: f.kind,
     meeting_days: stripUnit(f.days),
     long_attend_std: stripUnit(f.longStd),
-    gospel_std: stripUnit(f.gospelStd)
+    gospel_std: stripUnit(f.gospelStd),
+    instructor_name: String(f.instructor || "").trim() // [v56] 선택 입력
   };
 }
 function mapRecord(attendeeRow, recordRow) {
@@ -1684,7 +1700,7 @@ class Component extends DCLogic {
 
       meetingEditingId: null,
       // [v18] year/month도 kind/days와 동일하게 공통코드 로딩 후 loadAll()에서 첫 항목으로 채워진다.
-      meetingForm: { year: "", month: "", kind: "", days: "", longStd: "5", gospelStd: "3" },
+      meetingForm: { year: "", month: "", kind: "", days: "", longStd: "5", gospelStd: "3", instructor: "" },
       meetings: [],
       meetingYearFilter: "전체",
       meetingYearFilterApplied: "전체",
@@ -1801,7 +1817,8 @@ class Component extends DCLogic {
       .filter(function (m) { return ctx.toCode("year", m.year) === yearCode && (!kindCode || ctx.toCode("kind", m.kind) === kindCode); })
       .map(function (m) {
         return { meetingId: m.id, meeting: m, key: ctx.normKey(m.year, m.month, m.kind), kindCode: ctx.toCode("kind", m.kind) || String(m.kind),
-          monthNo: stripUnit(ctx.monthLabel(m.month)), month: ctx.monthLabel(m.month), kind: ctx.kindLabel(m.kind) };
+          monthNo: stripUnit(ctx.monthLabel(m.month)), month: ctx.monthLabel(m.month), kind: ctx.kindLabel(m.kind),
+          instructor: m.instructor || "", hasInstructor: !!m.instructor }; // [v56]
       })
       .sort(function (a, b) { return (a.monthNo - b.monthNo) || a.kindCode.localeCompare(b.kindCode); });
     var idxByKey = {};
@@ -1909,7 +1926,8 @@ class Component extends DCLogic {
       .filter(function (m) { return ctx.toCode("year", m.year) === yearCode && (!kindCode || ctx.toCode("kind", m.kind) === kindCode); })
       .map(function (m) {
         return { meetingId: m.id, meeting: m, key: ctx.normKey(m.year, m.month, m.kind), kindCode: ctx.toCode("kind", m.kind) || String(m.kind),
-          monthNo: stripUnit(ctx.monthLabel(m.month)), month: ctx.monthLabel(m.month), kind: ctx.kindLabel(m.kind), span: String(M) };
+          monthNo: stripUnit(ctx.monthLabel(m.month)), month: ctx.monthLabel(m.month), kind: ctx.kindLabel(m.kind), span: String(M),
+          head: m.instructor ? ctx.monthLabel(m.month) + " " + ctx.kindLabel(m.kind) + " · " + m.instructor : ctx.monthLabel(m.month) + " " + ctx.kindLabel(m.kind) }; // [v56]
       })
       .sort(function (a, b) { return (a.monthNo - b.monthNo) || a.kindCode.localeCompare(b.kindCode); });
     var allGroupCount = groups.length;
@@ -2000,11 +2018,11 @@ class Component extends DCLogic {
       // [v48] 총괄 — 2단 머리행: 1행 집회명(묶음 첫 칸), 2행 지표명
       var h1 = ["구역"], h2 = [""];
       pivot.groups.forEach(function (g) {
-        SUMMARY_METRICS.forEach(function (mk, j) { h1.push(j === 0 ? g.month + " " + g.kind : ""); h2.push(PIVOT_RULES[mk].label); });
+        SUMMARY_METRICS.forEach(function (mk, j) { h1.push(j === 0 ? g.head : ""); h2.push(PIVOT_RULES[mk].label); }); // [v56] 강사 포함
       });
       rows.push(h1); rows.push(h2);
     } else {
-      rows.push(["구역", "계"].concat(pivot.columns.map(function (c) { return c.month + " " + c.kind; })));
+      rows.push(["구역", "계"].concat(pivot.columns.map(function (c) { return c.month + " " + c.kind + (c.instructor ? " (" + c.instructor + ")" : ""); }))); // [v56]
     }
     pivot.lines.forEach(function (ln) {
       // 00·01 같은 앞자리 0 구역이 엑셀에서 숫자(0,1)로 바뀌지 않도록 ="00" 형식으로 저장
@@ -2018,7 +2036,7 @@ class Component extends DCLogic {
   }
 
   // ── [v41] 참석내역조회 엑셀다운 — 조회된 전체 행, 화면과 같은 칸, 저장된 값 기준 ──
-  exportListCsv(label, rows) {
+  exportListCsv(label, rows, fileLabel) { // [v56] fileLabel = 강사 제외 이름(파일명용)
     var self = this;
     if (!label) { alert("조회 후 다운로드하세요."); return; }
     if (this.state.bulkBusy) { alert("일괄 작업이 진행 중입니다. 완료 후 이용하세요."); return; }
@@ -2045,7 +2063,7 @@ class Component extends DCLogic {
         .concat([src.saved ? "O" : "", src.counselor || "", src.note || ""])); // [v42] 구원시인 O
     });
     var csv = "\uFEFF" + out.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
-    var fileName = "참석내역_" + label.replace(/\s+/g, "") + "_" + iso.replace(/-/g, "") + ".csv";
+    var fileName = "참석내역_" + (fileLabel || label).replace(/\s+/g, "") + "_" + iso.replace(/-/g, "") + ".csv";
     try { saveTextFile(fileName, csv); } // [v54]
     catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
   }
@@ -2227,7 +2245,7 @@ class Component extends DCLogic {
   }
   resetMeetingForm() {
     // year/month/kind/days는 빈 값으로 초기화 — 직후 loadAll()에서 공통코드 목록의 첫 항목으로 자동 채워짐.
-    this.setState({ meetingEditingId: null, meetingForm: { year: "", month: "", kind: "", days: "", longStd: "5", gospelStd: "3" } });
+    this.setState({ meetingEditingId: null, meetingForm: { year: "", month: "", kind: "", days: "", longStd: "5", gospelStd: "3", instructor: "" } });
   }
   saveMeetingForm() {
     var f = this.state.meetingForm;
@@ -2257,7 +2275,7 @@ class Component extends DCLogic {
     var ctx = this.codeCtx();
     this.setState({ meetingEditingId: id, meetingForm: {
       year: ctx.toCode("year", match.year) || match.year, month: ctx.toCode("month", match.month) || match.month,
-      kind: ctx.toCode("kind", match.kind) || match.kind, days: match.days, longStd: match.longStd, gospelStd: match.gospelStd } });
+      kind: ctx.toCode("kind", match.kind) || match.kind, days: match.days, longStd: match.longStd, gospelStd: match.gospelStd, instructor: match.instructor || "" } }); // [v56]
   }
   removeMeeting(id) {
     var self = this;
@@ -2437,7 +2455,7 @@ class Component extends DCLogic {
     var rows = this.validateCsvRows(this.state.csvRows);
     var targets = rows.filter(function (r) { return r.status === "ok"; });
     if (!targets.length) { this.setState({ csvRows: rows }); alert("등록할 정상 행이 없습니다."); return; }
-    var label = ctx.yearLabel(mt.year) + " " + ctx.monthLabel(mt.month) + " " + ctx.kindLabel(mt.kind);
+    var label = withInstructor(ctx.yearLabel(mt.year) + " " + ctx.monthLabel(mt.month) + " " + ctx.kindLabel(mt.kind), mt); // [v56]
     // [v53] 지난 집회는 등록 후 수정·삭제 불가(v49) — 한 번 더 확인
     if (this.isPastMeeting(mt)) {
       if (!confirm("지난 집회(" + label + ")에 " + targets.length + "건을 등록합니다.\n등록 후에는 수정·삭제할 수 없습니다. 계속하시겠습니까?")) return;
@@ -2997,7 +3015,7 @@ class Component extends DCLogic {
       .map(function (m) {
         var yearName = mcx.yearLabel(m.year);
         var monthName = mcx.monthLabel(m.month);
-        return { value: m.id, label: yearName + " " + monthName + " " + (mcx.kindLabel(m.kind)) };
+        return { value: m.id, label: withInstructor(yearName + " " + monthName + " " + (mcx.kindLabel(m.kind)), m) }; // [v56]
       });
     // [v53] 일괄등록(CSV) 탭 전용 — 지난 집회 포함 전체, 연도·월·종류 순
     var csvMeetingOptions = this.state.meetings.slice()
@@ -3006,7 +3024,7 @@ class Component extends DCLogic {
           (stripUnit(mcx.monthLabel(a.month)) - stripUnit(mcx.monthLabel(b.month))) ||
           String(mcx.toCode("kind", a.kind) || a.kind).localeCompare(String(mcx.toCode("kind", b.kind) || b.kind));
       })
-      .map(function (m) { return { value: m.id, label: mcx.yearLabel(m.year) + " " + mcx.monthLabel(m.month) + " " + mcx.kindLabel(m.kind) }; });
+      .map(function (m) { return { value: m.id, label: withInstructor(mcx.yearLabel(m.year) + " " + mcx.monthLabel(m.month) + " " + mcx.kindLabel(m.kind), m) }; }); // [v56]
     // [v18] "이전 명단에서 불러오기" — 어떤 집회의 등록이든 상관없이 신상정보만 복사해 오는 용도이므로
     // 전체 대상자(모든 집회)를 대상으로 하되, 어느 집회의 행인지 라벨에 표시해 혼동을 줄인다.
     var existingAttendeeOptions = this.state.attendees.map(function (a) {
@@ -3047,7 +3065,7 @@ class Component extends DCLogic {
           (stripUnit(mcx.monthLabel(a.month)) - stripUnit(mcx.monthLabel(b.month))) ||
           String(mcx.toCode("kind", a.kind) || a.kind).localeCompare(String(mcx.toCode("kind", b.kind) || b.kind));
       })
-      .map(function (m) { return { value: m.id, label: mcx.yearLabel(m.year) + " " + mcx.monthLabel(m.month) + " " + mcx.kindLabel(m.kind) }; });
+      .map(function (m) { return { value: m.id, label: withInstructor(mcx.yearLabel(m.year) + " " + mcx.monthLabel(m.month) + " " + mcx.kindLabel(m.kind), m) }; }); // [v56]
     // [v49] 개별등록 탭 하단 콤보 = 참석자 등록 콤보(현재·이후 집회)
     if (this.state.attendTab === "single") listMeetingOptions = meetingSelectOptions;
     var listReadOnly = !!listMeeting && this.isPastMeeting(listMeeting);
@@ -3141,7 +3159,7 @@ class Component extends DCLogic {
     var drillRows = drillCol ? this.getPivotCellRows(drillKey, drillState.zone, drillState.meetingId) : [];
     var pivotDrill = {
       title: drillCol
-        ? (drillState.zone || "(미지정)") + "구역 · " + ctx.yearLabel(drillCol.meeting.year) + " " + drillCol.month + " " + drillCol.kind + " · " + PIVOT_RULES[drillKey].label + " " + drillRows.length + "명"
+        ? (drillState.zone || "(미지정)") + "구역 · " + withInstructor(ctx.yearLabel(drillCol.meeting.year) + " " + drillCol.month + " " + drillCol.kind, drillCol.meeting) + " · " + PIVOT_RULES[drillKey].label + " " + drillRows.length + "명"
         : "",
       rows: drillRows
     };
@@ -3260,10 +3278,11 @@ class Component extends DCLogic {
       // [v41] 참석내역조회 엑셀다운
       listExportDisabled: !listMeeting || rows.length === 0 || this.state.bulkBusy,
       exportList: function () {
-        self.exportListCsv(listMeeting ? mcx.yearLabel(listMeeting.year) + " " + mcx.monthLabel(listMeeting.month) + " " + mcx.kindLabel(listMeeting.kind) : "", rows);
+        var baseLabel = listMeeting ? mcx.yearLabel(listMeeting.year) + " " + mcx.monthLabel(listMeeting.month) + " " + mcx.kindLabel(listMeeting.kind) : "";
+        self.exportListCsv(baseLabel ? withInstructor(baseLabel, listMeeting) : "", rows, baseLabel); // [v56] 파일명은 강사 제외
       },
       listNotShown: !listMeeting,
-      listMeetingLabel: listMeeting ? mcx.yearLabel(listMeeting.year) + " " + mcx.monthLabel(listMeeting.month) + " " + mcx.kindLabel(listMeeting.kind) : "",
+      listMeetingLabel: listMeeting ? withInstructor(mcx.yearLabel(listMeeting.year) + " " + mcx.monthLabel(listMeeting.month) + " " + mcx.kindLabel(listMeeting.kind), listMeeting) : "", // [v56]
 
       meetingKindOptions: meetingKindOptionsDyn,
       meetingDaysOptions: meetingDaysOptionsDyn,
@@ -3272,6 +3291,8 @@ class Component extends DCLogic {
       meetingForm: {
         year: this.state.meetingForm.year, month: this.state.meetingForm.month, kind: this.state.meetingForm.kind, days: this.state.meetingForm.days,
         longStd: this.state.meetingForm.longStd, gospelStd: this.state.meetingForm.gospelStd,
+        instructor: this.state.meetingForm.instructor || "", // [v56]
+        setInstructor: function (e) { self.updateMeetingForm("instructor", e && e.target ? e.target.value : e); },
         setYear: function (e) { self.updateMeetingForm("year", e && e.target ? e.target.value : e); },
         setKind: function (e) { self.updateMeetingForm("kind", e && e.target ? e.target.value : e); },
         setMonth: function (e) { self.updateMeetingForm("month", e && e.target ? e.target.value : e); },
@@ -3294,7 +3315,7 @@ class Component extends DCLogic {
         var kindLabel = mcx.kindLabel(m.kind);
         var yearLabel = mcx.yearLabel(m.year);
         var monthLabel = mcx.monthLabel(m.month);
-        return { id: m.id, year: yearLabel, month: monthLabel, kind: kindLabel, days: m.days, longStd: m.longStd, gospelStd: m.gospelStd, edit: function () { self.editMeeting(m.id); }, remove: function () { self.removeMeeting(m.id); } };
+        return { id: m.id, year: yearLabel, month: monthLabel, kind: kindLabel, instructor: m.instructor || "-", days: m.days, longStd: m.longStd, gospelStd: m.gospelStd, edit: function () { self.editMeeting(m.id); }, remove: function () { self.removeMeeting(m.id); } };
       }),
       meetingRowCount: this.state.meetings.filter(function (m) {
         return self.state.meetingYearFilterApplied === "전체" || (mcx.toCode("year", m.year) || m.year) === self.state.meetingYearFilterApplied;
