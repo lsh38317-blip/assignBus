@@ -3,6 +3,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v54] Safari 다운로드 오류(WebKitBlobResource 오류 1) 수정 — 공통 다운로드 함수, 파일 내용 해제를 1초→60초 후로 -->
+<!-- [v53] 집회년도·집회월 콤보 숫자 오름차순 정렬, 일괄등록(CSV) 탭에서 지난 집회 선택 허용(등록 전 추가 확인) -->
 <!-- [v52] 참석내역 엑셀다운 1행 "기준일" 위치를 비고 열(마지막 열)로 이동 -->
 <!-- [v51] 참석 현황 표(개별등록·참석내역조회 탭)에서 집회년도·집회월·집회종류 열 숨김 — 엑셀다운은 유지 -->
 <!-- [v50] 모바일 참석내역 표 세로 스크롤 시 인도자·대상자 머리글이 밀려 올라가던 문제 수정(머리글 위쪽 고정 유지) -->
@@ -1007,7 +1009,8 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
             <span class="csv-label">등록 집회</span>
             <sc-raw-select class="csv-meeting" value="{{csv.meetingId}}" sc-camel-on-change="{{csv.setMeetingId}}">
               <option value="">집회를 선택하세요</option>
-              <sc-for list="{{meetingSelectOptions}}" as="opt" hint-placeholder-count="3">
+              <!-- [v53] 지난 집회 포함 전체 -->
+              <sc-for list="{{csvMeetingOptions}}" as="opt" hint-placeholder-count="3">
                 <option value="{{opt.value}}">{{opt.label}}</option>
               </sc-for>
             </sc-raw-select>
@@ -1489,6 +1492,19 @@ function csvCell(v) {
 function ynToBool(v) { return v === 'Y' || v === true || v === 1 || v === '1'; }
 function boolToYn(v) { return v ? 'Y' : 'N'; }
 function stripUnit(s) { return parseInt(String(s), 10) || 0; } // "2026년" -> 2026, "5일" -> 5
+// [v54] 공통 텍스트 파일 다운로드 — Safari는 blob을 비동기로 읽으므로 URL 해제를 60초 뒤로 미룬다
+function saveTextFile(fileName, text, mime) {
+  var blob = new Blob([text], { type: mime || "text/csv;charset=utf-8" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = fileName; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+}
+// [v53] 공통코드 중분류를 명칭의 숫자 기준 오름차순 정렬(2024년→2025년→2026년, 1월→12월). 숫자가 같으면 코드순
+function sortByUnit(list) {
+  return list.slice().sort(function (a, b) { return (stripUnit(a.name) - stripUnit(b.name)) || String(a.code).localeCompare(String(b.code)); });
+}
 
 function mapMajor(row) {
   return { id: String(row.id), code: row.major_code, name: row.major_name };
@@ -1705,7 +1721,7 @@ class Component extends DCLogic {
       return mj ? minors.filter(function (n) { return n.majorId === mj.id; }) : [];
     }
     function mapOf(list) { var o = {}; list.forEach(function (n) { o[n.code] = n.name; }); return o; }
-    var yearList = listOf("sck_year"), monthList = listOf("sck_month"), kindList = listOf("sck_kind");
+    var yearList = sortByUnit(listOf("sck_year")), monthList = sortByUnit(listOf("sck_month")), kindList = listOf("sck_kind"); // [v53] 년·월 정렬
     var yMap = mapOf(yearList), mMap = mapOf(monthList), kMap = mapOf(kindList);
     var lists = { year: yearList, month: monthList, kind: kindList };
     // [v28 — 안전장치] 집회 년도·월·종류 값을 공통코드로 변환.
@@ -1962,14 +1978,8 @@ class Component extends DCLogic {
     });
     var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
     var fileName = "출석현황_" + pivot.fileKey + "_" + pivot.yearLabel + "_" + pivot.ymd + ".csv";
-    try {
-      var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url; a.download = fileName;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    } catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
+    try { saveTextFile(fileName, csv); } // [v54]
+    catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
   }
 
   // ── [v41] 참석내역조회 엑셀다운 — 조회된 전체 행, 화면과 같은 칸, 저장된 값 기준 ──
@@ -2001,14 +2011,8 @@ class Component extends DCLogic {
     });
     var csv = "\uFEFF" + out.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
     var fileName = "참석내역_" + label.replace(/\s+/g, "") + "_" + iso.replace(/-/g, "") + ".csv";
-    try {
-      var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url; a.download = fileName;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    } catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
+    try { saveTextFile(fileName, csv); } // [v54]
+    catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
   }
 
   // ── 모바일 사이드바(햄버거 메뉴) ──
@@ -2318,14 +2322,8 @@ class Component extends DCLogic {
   }
   downloadCsvTemplate() {
     var csv = "\uFEFF" + CSV_HEADERS.join(",") + "\r\n";
-    try {
-      var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url; a.download = "참석자_일괄등록_양식.csv";
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-    } catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
+    try { saveTextFile("참석자_일괄등록_양식.csv", csv); } // [v54]
+    catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
   }
   onCsvFile(e) {
     var self = this;
@@ -2386,7 +2384,10 @@ class Component extends DCLogic {
     var targets = rows.filter(function (r) { return r.status === "ok"; });
     if (!targets.length) { this.setState({ csvRows: rows }); alert("등록할 정상 행이 없습니다."); return; }
     var label = ctx.yearLabel(mt.year) + " " + ctx.monthLabel(mt.month) + " " + ctx.kindLabel(mt.kind);
-    if (!confirm(label + "에 " + targets.length + "건을 등록합니다. 계속하시겠습니까?")) return;
+    // [v53] 지난 집회는 등록 후 수정·삭제 불가(v49) — 한 번 더 확인
+    if (this.isPastMeeting(mt)) {
+      if (!confirm("지난 집회(" + label + ")에 " + targets.length + "건을 등록합니다.\n등록 후에는 수정·삭제할 수 없습니다. 계속하시겠습니까?")) return;
+    } else if (!confirm(label + "에 " + targets.length + "건을 등록합니다. 계속하시겠습니까?")) return;
 
     var okNos = {}, failNos = {}, done = 0;
     this.setState({ csvBusy: true, csvRows: rows, csvProgress: "0 / " + targets.length + " 등록 중…" });
@@ -2904,8 +2905,8 @@ class Component extends DCLogic {
     var monthMajor = this.state.majors.filter(function (mj) { return mj.code === 'sck_month'; })[0];
     var kindMinorList = kindMajor ? this.state.minors.filter(function (mn) { return mn.majorId === kindMajor.id; }) : [];
     var daysMinorList = daysMajor ? this.state.minors.filter(function (mn) { return mn.majorId === daysMajor.id; }) : [];
-    var yearMinorList = yearMajor ? this.state.minors.filter(function (mn) { return mn.majorId === yearMajor.id; }) : [];
-    var monthMinorList = monthMajor ? this.state.minors.filter(function (mn) { return mn.majorId === monthMajor.id; }) : [];
+    var yearMinorList = sortByUnit(yearMajor ? this.state.minors.filter(function (mn) { return mn.majorId === yearMajor.id; }) : []); // [v53]
+    var monthMinorList = sortByUnit(monthMajor ? this.state.minors.filter(function (mn) { return mn.majorId === monthMajor.id; }) : []); // [v53]
     var meetingKindOptionsDyn = kindMinorList.map(function (mn) { return { value: mn.code, label: mn.name }; });
     var meetingDaysOptionsDyn = daysMinorList.map(function (mn) { return mn.name; });
     var meetingYearOptionsDyn = yearMinorList.map(function (mn) { return { value: mn.code, label: mn.name }; });
@@ -2938,6 +2939,14 @@ class Component extends DCLogic {
         var monthName = mcx.monthLabel(m.month);
         return { value: m.id, label: yearName + " " + monthName + " " + (mcx.kindLabel(m.kind)) };
       });
+    // [v53] 일괄등록(CSV) 탭 전용 — 지난 집회 포함 전체, 연도·월·종류 순
+    var csvMeetingOptions = this.state.meetings.slice()
+      .sort(function (a, b) {
+        return (stripUnit(mcx.yearLabel(a.year)) - stripUnit(mcx.yearLabel(b.year))) ||
+          (stripUnit(mcx.monthLabel(a.month)) - stripUnit(mcx.monthLabel(b.month))) ||
+          String(mcx.toCode("kind", a.kind) || a.kind).localeCompare(String(mcx.toCode("kind", b.kind) || b.kind));
+      })
+      .map(function (m) { return { value: m.id, label: mcx.yearLabel(m.year) + " " + mcx.monthLabel(m.month) + " " + mcx.kindLabel(m.kind) }; });
     // [v18] "이전 명단에서 불러오기" — 어떤 집회의 등록이든 상관없이 신상정보만 복사해 오는 용도이므로
     // 전체 대상자(모든 집회)를 대상으로 하되, 어느 집회의 행인지 라벨에 표시해 혼동을 줄인다.
     var existingAttendeeOptions = this.state.attendees.map(function (a) {
@@ -3157,6 +3166,7 @@ class Component extends DCLogic {
       isAttendEditMode: !!this.state.attendForm.editingAttendeeId,
       isExistingAttendeeMode: this.state.attendForm.mode === 'existing',
       meetingSelectOptions: meetingSelectOptions,
+      csvMeetingOptions: csvMeetingOptions, // [v53]
       existingAttendeeOptions: existingAttendeeOptions,
       attendForm: {
         meetingId: this.state.attendForm.meetingId, mode: this.state.attendForm.mode, existingAttendeeId: this.state.attendForm.existingAttendeeId,
