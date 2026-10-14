@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v55] CSV 일괄등록에 월~일·구원시인·상담인·비고 항목 추가(요일·구원시인은 O o 0 ○ V v Y y 1 이면 Y), 빈 줄 제외, 미리보기 요일 7칸 -->
 <!-- [v54] Safari 다운로드 오류(WebKitBlobResource 오류 1) 수정 — 공통 다운로드 함수, 파일 내용 해제를 1초→60초 후로 -->
 <!-- [v53] 집회년도·집회월 콤보 숫자 오름차순 정렬, 일괄등록(CSV) 탭에서 지난 집회 선택 허용(등록 전 추가 확인) -->
 <!-- [v52] 참석내역 엑셀다운 1행 "기준일" 위치를 비고 열(마지막 열)로 이동 -->
@@ -539,6 +540,19 @@ input.csv-hidden{display:none}
 .reg-table .c-target{left:160px;width:104px;min-width:104px;max-width:104px;box-shadow:inset -1px 0 0 #d9dde5}
 .reg-table .c-act{right:0;width:96px;min-width:96px;box-shadow:inset 1px 0 0 #d9dde5}
 .csv-preview{max-height:320px;overflow:auto;border:1px solid #e5e7eb;border-radius:8px}
+/* [v55] 미리보기 16칸 — 머리행 위 고정, NO·구역·인도자·대상자 왼쪽 고정 */
+.csv-preview table{border-collapse:separate;border-spacing:0}
+.csv-preview thead th{position:sticky;top:0;z-index:2;background:#f7f9fc}
+.csv-preview tbody td{background:#fff}
+.csv-preview .cp-stk{position:sticky;z-index:1}
+.csv-preview thead th.cp-stk{z-index:3}
+.csv-preview .cp-no{left:0;width:44px;min-width:44px;max-width:44px}
+.csv-preview .cp-zone{left:44px;width:52px;min-width:52px;max-width:52px}
+.csv-preview .cp-leader{left:96px;width:96px;min-width:96px;max-width:96px;overflow:hidden;text-overflow:ellipsis}
+.csv-preview .cp-target{left:192px;width:96px;min-width:96px;max-width:96px;overflow:hidden;text-overflow:ellipsis;box-shadow:inset -1px 0 0 #d9dde5}
+.csv-preview .cp-day{text-align:center;width:32px;min-width:32px;padding-left:4px;padding-right:4px}
+.csv-preview .cp-res{white-space:nowrap}
+.csv-sum .skip{color:#6b7280}
 
 /* ===== 반응형(모바일) 레이아웃 ===== */
 .app-shell{width:100%;height:100vh;height:100dvh;display:flex;overflow:hidden;background:#efece3}
@@ -585,6 +599,9 @@ input.csv-hidden{display:none}
   /* [v38] 좁은 화면: 콤보는 한 줄 전체, 버튼·파일명은 다음 줄 */
   .csv-row{flex-wrap:wrap}
   .csv-meeting{flex:1 1 calc(100% - 70px);width:auto}
+  /* [v55] 좁은 화면: 미리보기는 NO·구역만 왼쪽 고정(머리행은 위쪽 고정 유지) */
+  .csv-preview td.cp-leader,.csv-preview td.cp-target{position:static;box-shadow:none}
+  .csv-preview thead th.cp-leader,.csv-preview thead th.cp-target{position:sticky;top:0;left:auto;z-index:2;box-shadow:none}
   /* [v50] 고정 해제는 본문 칸만 — 머리글은 위쪽 고정 유지(가로 스크롤 시엔 함께 이동) */
   .reg-table td.c-leader,.reg-table td.c-target{position:static;box-shadow:none}
   .reg-table thead th.c-leader,.reg-table thead th.c-target,
@@ -1001,7 +1018,7 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
       <div class="panel">
         <div class="panel-head">
           <h2>CSV 일괄등록</h2>
-          <div class="sub">CSV 파일(구역, 인도자, 대상자, 관계)로 여러 대상자를 한 번에 등록합니다.</div>
+          <div class="sub">CSV 파일(구역, 인도자, 대상자, 관계 + 월~일, 구원시인, 상담인, 비고)로 여러 대상자를 한 번에 등록합니다. 요일·구원시인은 O, 0, ○, V, Y, 1 표시를 참석으로 봅니다.</div>
         </div>
         <div class="panel-body">
           <!-- [v38] 등록 집회 / 양식 다운로드 / 파일 선택 / 파일명 한 줄 -->
@@ -1019,15 +1036,20 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
             <span class="csv-file" title="{{csv.fileLabel}}">{{csv.fileLabel}}</span>
           </div>
           <sc-if value="{{csv.hasRows}}" hint-placeholder-val="{{false}}">
-            <div class="csv-sum">미리보기 · 전체 {{csv.total}}건 / <span class="ok">정상 {{csv.okCount}}건</span> / <span class="ng">오류 {{csv.ngCount}}건</span></div>
+            <div class="csv-sum">미리보기 · 전체 {{csv.total}}건 / <span class="ok">정상 {{csv.okCount}}건</span> / <span class="ng">오류 {{csv.ngCount}}건</span><sc-if value="{{csv.hasSkip}}" hint-placeholder-val="{{false}}"> / <span class="skip">빈 줄 제외 {{csv.skipCount}}건</span></sc-if></div>
             <div class="csv-preview">
               <sc-raw-table>
-                <sc-raw-thead><sc-raw-tr><sc-raw-th>No</sc-raw-th><sc-raw-th>구역</sc-raw-th><sc-raw-th>인도자</sc-raw-th><sc-raw-th>대상자</sc-raw-th><sc-raw-th>관계</sc-raw-th><sc-raw-th>결과</sc-raw-th></sc-raw-tr></sc-raw-thead>
+                <!-- [v55] 월~일 7칸 + 구원시인·상담인·비고 -->
+                <sc-raw-thead><sc-raw-tr><sc-raw-th class="cp-stk cp-no">No</sc-raw-th><sc-raw-th class="cp-stk cp-zone">구역</sc-raw-th><sc-raw-th class="cp-stk cp-leader">인도자</sc-raw-th><sc-raw-th class="cp-stk cp-target">대상자</sc-raw-th><sc-raw-th>관계</sc-raw-th>
+                  <sc-raw-th class="cp-day">월</sc-raw-th><sc-raw-th class="cp-day">화</sc-raw-th><sc-raw-th class="cp-day">수</sc-raw-th><sc-raw-th class="cp-day">목</sc-raw-th><sc-raw-th class="cp-day">금</sc-raw-th><sc-raw-th class="cp-day">토</sc-raw-th><sc-raw-th class="cp-day">일</sc-raw-th>
+                  <sc-raw-th class="cp-day">구원시인</sc-raw-th><sc-raw-th>상담인</sc-raw-th><sc-raw-th>비고</sc-raw-th><sc-raw-th>결과</sc-raw-th></sc-raw-tr></sc-raw-thead>
                 <sc-raw-tbody>
                   <sc-for list="{{csv.rows}}" as="cr" hint-placeholder-count="3">
                     <sc-raw-tr>
-                      <sc-raw-td>{{cr.no}}</sc-raw-td><sc-raw-td>{{cr.zone}}</sc-raw-td><sc-raw-td>{{cr.leader}}</sc-raw-td><sc-raw-td>{{cr.target}}</sc-raw-td><sc-raw-td>{{cr.relation}}</sc-raw-td>
-                      <sc-raw-td><span class="tag {{cr.tagCls}}">{{cr.result}}</span></sc-raw-td>
+                      <sc-raw-td class="cp-stk cp-no">{{cr.no}}</sc-raw-td><sc-raw-td class="cp-stk cp-zone">{{cr.zone}}</sc-raw-td><sc-raw-td class="cp-stk cp-leader">{{cr.leader}}</sc-raw-td><sc-raw-td class="cp-stk cp-target">{{cr.target}}</sc-raw-td><sc-raw-td>{{cr.relation}}</sc-raw-td>
+                      <sc-for list="{{cr.dayMarks}}" as="dm" hint-placeholder-count="7"><sc-raw-td class="cp-day">{{dm.text}}</sc-raw-td></sc-for>
+                      <sc-raw-td class="cp-day">{{cr.savedMark}}</sc-raw-td><sc-raw-td>{{cr.counselor}}</sc-raw-td><sc-raw-td>{{cr.note}}</sc-raw-td>
+                      <sc-raw-td class="cp-res"><span class="tag {{cr.tagCls}}">{{cr.result}}</span></sc-raw-td>
                     </sc-raw-tr>
                   </sc-for>
                 </sc-raw-tbody>
@@ -1592,6 +1614,14 @@ function mapAttendanceRow(attendeeRow, recordRow) {
 
 // ===== [v35] CSV 일괄등록 헬퍼 =====
 var CSV_HEADERS = ["구역", "인도자", "대상자", "관계"];
+// [v55] 선택 항목 — 없으면 빈 값(요일·구원시인 N). 머리글은 공백 무시 비교("비 고" = "비고")
+var CSV_OPT_HEADERS = ["월", "화", "수", "목", "금", "토", "일", "구원시인", "상담인", "비고"];
+var CSV_YES_MARKS = ["O", "o", "0", "○", "V", "v", "Y", "y", "1"];
+function normHead(h) { return String(h == null ? "" : h).replace(/^\uFEFF/, "").replace(/\s+/g, ""); }
+function csvMarkText(v) {
+  return String(v == null ? "" : v).trim().replace(/[\uFF01-\uFF5E]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }); // 전각→반각
+}
+function csvMark(v) { return CSV_YES_MARKS.indexOf(csvMarkText(v)) >= 0; } // true → 'Y', false → 'N'
 // UTF-8로 읽어 깨진 글자(U+FFFD)가 있으면 EUC-KR로 다시 읽는다. BOM 제거.
 function decodeCsv(buf) {
   var text = new TextDecoder("utf-8").decode(buf);
@@ -1601,7 +1631,11 @@ function decodeCsv(buf) {
   return text.replace(/^\uFEFF/, "");
 }
 // 따옴표("...", "" 이스케이프)와 쉼표·줄바꿈을 처리하는 CSV 파서
+// [v55] 빈 줄까지 포함한 전체 행 — parseCsv(빈 줄 제거)와 빈 줄 건수 계산에 사용
 function parseCsv(text) {
+  return parseCsvAll(text).filter(function (r) { return r.some(function (c) { return String(c).trim() !== ""; }); });
+}
+function parseCsvAll(text) {
   var rows = [], row = [], cell = "", q = false;
   for (var i = 0; i < text.length; i++) {
     var ch = text[i];
@@ -1616,7 +1650,7 @@ function parseCsv(text) {
     } else cell += ch;
   }
   if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
-  return rows.filter(function (r) { return r.some(function (c) { return String(c).trim() !== ""; }); });
+  return rows;
 }
 
 class Component extends DCLogic {
@@ -1683,6 +1717,7 @@ class Component extends DCLogic {
       csvMeetingId: "",
       csvFileName: "",
       csvRows: [],
+      csvSkipped: 0, // [v55] 빈 줄 제외 건수
       csvBusy: false,
       csvProgress: "",
 
@@ -2311,7 +2346,7 @@ class Component extends DCLogic {
   // ── [v35] CSV 일괄등록 ──
   resetCsv() {
     if (this.state.csvBusy) return;
-    this.setState({ csvFileName: "", csvRows: [], csvProgress: "" });
+    this.setState({ csvFileName: "", csvRows: [], csvProgress: "", csvSkipped: 0 });
   }
   setCsvMeeting(val) {
     // 집회가 바뀌면 DB 중복 판정이 달라지므로 미리보기를 다시 검증한다.
@@ -2321,7 +2356,7 @@ class Component extends DCLogic {
     });
   }
   downloadCsvTemplate() {
-    var csv = "\uFEFF" + CSV_HEADERS.join(",") + "\r\n";
+    var csv = "\uFEFF" + CSV_HEADERS.concat(CSV_OPT_HEADERS).join(",") + "\r\n"; // [v55] 14칸
     try { saveTextFile("참석자_일괄등록_양식.csv", csv); } // [v54]
     catch (e) { alert("다운로드 실패: " + ((e && e.message) || e)); }
   }
@@ -2332,21 +2367,40 @@ class Component extends DCLogic {
     if (!file) return;
     if (this.state.csvBusy) { input.value = ""; return; }
     file.arrayBuffer().then(function (buf) {
-      var table = parseCsv(decodeCsv(buf));
+      var text = decodeCsv(buf);
+      var table = parseCsv(text);
+      var blankLines = parseCsvAll(text).length - table.length; // [v55] 모든 칸이 빈 줄
       input.value = ""; // 같은 파일을 다시 선택해도 change 이벤트가 나도록
       if (!table.length) { alert("파일에 내용이 없습니다."); return; }
-      var head = table[0].map(function (h) { return String(h).trim(); });
+      var head = table[0].map(normHead); // [v55] 공백 무시
       var idx = CSV_HEADERS.map(function (h) { return head.indexOf(h); });
+      var oidx = CSV_OPT_HEADERS.map(function (h) { return head.indexOf(h); }); // -1 = 없음(예전 4칸 양식)
       if (idx.some(function (i) { return i < 0; })) {
         alert("양식이 다릅니다. 첫 줄에 구역,인도자,대상자,관계 항목이 있어야 합니다.");
         return;
       }
-      var rows = table.slice(1).map(function (r, n) {
+      var skipped = blankLines;
+      var rows = [];
+      table.slice(1).forEach(function (r, n) {
         function at(k) { return String(r[idx[k]] == null ? "" : r[idx[k]]).trim(); }
-        return { no: n + 1, zone: at(0), leader: at(1), target: at(2), relation: at(3), status: "", msg: "" };
+        function opt(k) { var i = oidx[k]; return i < 0 ? "" : String(r[i] == null ? "" : r[i]).trim(); }
+        // [v55] 빈 줄 제외 — 모든 칸이 비었거나, 구역만 있고 나머지가 모두 빈 줄
+        var restEmpty = !at(1) && !at(2) && !at(3) && CSV_OPT_HEADERS.every(function (h, k) { return !opt(k); });
+        if (restEmpty) { skipped++; return; }
+        var days = {}, warns = [];
+        DAY_DEFS.forEach(function (d, k) {
+          var raw = opt(k);
+          days[d[0]] = csvMark(raw);
+          if (raw && !days[d[0]]) warns.push(d[1] + '="' + raw + '"');
+        });
+        var savedRaw = opt(7);
+        if (savedRaw && !csvMark(savedRaw)) warns.push('구원시인="' + savedRaw + '"');
+        rows.push({ no: n + 1, zone: at(0), leader: at(1), target: at(2), relation: at(3),
+          days: days, saved: csvMark(savedRaw), counselor: opt(8), note: opt(9),
+          warn: warns.length ? "확인: " + warns.join(", ") + " → 불참 처리" : "", status: "", msg: "" });
       });
       if (!rows.length) { alert("등록할 데이터 행이 없습니다."); return; }
-      self.setState({ csvFileName: file.name, csvProgress: "", csvRows: self.validateCsvRows(rows) });
+      self.setState({ csvFileName: file.name, csvProgress: "", csvSkipped: skipped, csvRows: self.validateCsvRows(rows) });
     }).catch(function (err) { input.value = ""; alert("파일 읽기 실패: " + ((err && err.message) || err)); });
   }
   // 행별 검증 — 필수값(구역·대상자), DB 중복(선택 집회 기준), 파일 안 중복
@@ -2399,7 +2453,13 @@ class Component extends DCLogic {
         var newId = json && json.id;
         if (!newId) throw new Error("신규 대상자 id 없음");
         return callGateway('add', 'sac_attendance_record', {
-          data: { attendee_id: Number(newId), mon_yn: 'N', tue_yn: 'N', wed_yn: 'N', thu_yn: 'N', fri_yn: 'N', sat_yn: 'N', sun_yn: 'N' }
+          // [v55] 파일의 요일·구원시인·상담인·비고 저장 (예전 4칸 양식이면 요일 N, 나머지 빈 값)
+          data: (function () {
+            var d = r.days || {};
+            var rec = { attendee_id: Number(newId), gospel_confessor: r.saved ? 'Y' : '', counselor_name: r.counselor || '', note: r.note || '' };
+            DAY_DEFS.forEach(function (x) { rec[x[0] + '_yn'] = d[x[0]] ? 'Y' : 'N'; });
+            return rec;
+          })()
         }).catch(function (e) {
           return callGateway('delete', 'sac_attendee', { id: Number(newId) }).catch(function () {}).then(function () { throw e; });
         });
@@ -3138,10 +3198,15 @@ class Component extends DCLogic {
           fileLabel: self.state.csvFileName || "선택된 파일 없음",
           hasRows: cr.length > 0,
           total: cr.length, okCount: ok, ngCount: cr.length - ok,
+          hasSkip: (self.state.csvSkipped || 0) > 0, skipCount: self.state.csvSkipped || 0, // [v55]
           progressText: self.state.csvProgress,
           rows: cr.map(function (r) {
+            var d = r.days || {};
             return { no: String(r.no), zone: r.zone || "-", leader: r.leader || "-", target: r.target || "-", relation: r.relation || "-",
-              result: r.msg, tagCls: r.status === "ok" ? "good" : (r.status === "fail" ? "crit" : "warn") };
+              dayMarks: DAY_DEFS.map(function (x) { return { text: d[x[0]] ? "O" : "" }; }), // [v55] 판정 결과를 O로 통일
+              savedMark: r.saved ? "O" : "", counselor: r.counselor || "", note: r.note || "",
+              result: r.status === "ok" && r.warn ? r.msg + " · " + r.warn : r.msg,
+              tagCls: r.status === "ok" ? "good" : (r.status === "fail" ? "crit" : "warn") };
           }),
           reset: function () { self.resetCsv(); },
           register: function () { self.bulkRegisterCsv(); }
