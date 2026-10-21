@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v63] 집회정보 등록·수정 저장 — 연도·월·종류 중복 시 "중복된 내용이 있습니다." 후 저장 안 함, 저장 후 "○년 ○월 ○○ 집회정보가 정상 등록/수정되었습니다." 팝업 확인 시 저장 연도로 하단 목록 조회, 삭제 후 "…삭제되었습니다." 팝업 -->
 <!-- [v62] CSV 일괄등록 완료 후 화면 초기화 제외 — 성공 행은 "등록완료"(초록)로 남기고 파일명·미리보기 유지, 건수 줄에 등록완료·실패 건수 추가, 재검증에서 등록완료 행 제외 -->
 <!-- [v61] 집회정보등록 "등록된 집회 기준" — 화면 로딩 시 조회 제외(안내문구), 조회 버튼 클릭 시 조회, 년도 콤보 기본 현재 연도·변경 시 결과 초기화, 등록·수정·삭제 후 조회 상태면 새로고침, 메뉴 이동 시 초기화 -->
 <!-- [v60] 참석내역조회 탭 집회 콤보 변경 시 자동 조회 제외 — 확인·체크/편집 해제·정렬 ▲ 후 조회결과만 초기화(조회 버튼으로 조회) -->
@@ -2324,6 +2325,10 @@ class Component extends DCLogic {
     var ctx = this.codeCtx();
     var yc = ctx.toCode("year", f.year), mc = ctx.toCode("month", f.month), kc = ctx.toCode("kind", f.kind);
     if (!yc || !mc || !kc) { alert("공통코드에 없는 값입니다. 집회년도·집회월·집회종류를 다시 선택하세요."); return; }
+    // [v63] 연도·월·종류 중복 확인(수정 시 자기 자신 제외) — 중복이면 저장하지 않고 폼 유지
+    var isEdit = !!this.state.meetingEditingId;
+    if (this.findDuplicateMeeting(yc, mc, kc, this.state.meetingEditingId)) { alert("중복된 내용이 있습니다."); return; }
+    var title = this.meetingTitle({ year: yc, month: mc, kind: kc });
     var row = meetingFormToRow(Object.assign({}, f, { year: yc, month: mc, kind: kc }));
     var call;
     if (this.state.meetingEditingId) {
@@ -2334,8 +2339,12 @@ class Component extends DCLogic {
     }
     call.then(function () {
       self.resetMeetingForm();
-      return self.loadAll();
-    }).catch(function (e) { alert('저장 실패: ' + ((e && e.message) || e)); });
+      // [v63] 재조회 완료 후 팝업 → 확인 시 저장한 연도로 하단 목록 조회
+      return self.loadAll().then(function () {
+        alert(title + " 집회정보가 정상 " + (isEdit ? "수정" : "등록") + "되었습니다.");
+        self.queryMeetingYear(yc);
+      });
+    }, function (e) { alert('저장 실패: ' + ((e && e.message) || e)); });
   }
   editMeeting(id) {
     var match = this.state.meetings.filter(function (m) { return m.id === id; })[0];
@@ -2348,9 +2357,32 @@ class Component extends DCLogic {
   }
   removeMeeting(id) {
     var self = this;
+    var match = this.state.meetings.filter(function (m) { return m.id === id; })[0];
+    var title = match ? this.meetingTitle(match) : "";
     callGateway('delete', 'sac_meeting_info', { id: Number(id) })
-      .then(function () { return self.loadAll(); })
-      .catch(function (e) { alert('삭제 실패: ' + ((e && e.message) || e)); });
+      .then(function () {
+        // [v63] 수정 중이던 집회를 삭제했으면 폼 초기화
+        if (self.state.meetingEditingId === id) self.resetMeetingForm();
+        return self.loadAll().then(function () { alert((title ? title + " " : "") + "집회정보가 삭제되었습니다."); });
+      }, function (e) { alert('삭제 실패: ' + ((e && e.message) || e)); });
+  }
+  // [v63] "2024년 10월 오전집회(외부)" 형식
+  meetingTitle(m) {
+    var ctx = this.codeCtx();
+    return [ctx.yearLabel(m.year), ctx.monthLabel(m.month), ctx.kindLabel(m.kind)].join(" ");
+  }
+  // [v63] 연도·월·종류 코드로 중복 집회 찾기(옛 형식 데이터도 코드로 맞춰 비교, exceptId 제외)
+  findDuplicateMeeting(yc, mc, kc, exceptId) {
+    var ctx = this.codeCtx();
+    return this.state.meetings.filter(function (m) {
+      if (exceptId && String(m.id) === String(exceptId)) return false;
+      return (ctx.toCode("year", m.year) || m.year) === yc && (ctx.toCode("month", m.month) || m.month) === mc &&
+        (ctx.toCode("kind", m.kind) || m.kind) === kc;
+    })[0] || null;
+  }
+  // [v63] 년도 콤보·조회조건·조회 상태를 한 번에 설정
+  queryMeetingYear(yearCode) {
+    this.setState({ meetingYearFilter: yearCode, meetingYearFilterApplied: yearCode, meetingQueried: true });
   }
 
   // ── 참석정보(대상자) ──
