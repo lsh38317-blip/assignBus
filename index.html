@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>seoulks_attend_count</title>
+<!-- [v64] 지난 집회 CSV 일괄등록 = 파일 기준 동기화 — 같은 구역·대상자 없으면 신규, 있으면 수정(내용 같으면 변경없음, DB 중복은 모두 수정, 빈 칸도 덮어씀), 파일에 없는 DB 대상자는 "삭제" 체크 시 삭제 / 처리 순서 신규→수정→삭제, 신규·수정 실패 시 삭제 건너뜀 / 오류 행 제외(B안) / 정상 0건 삭제 금지·30% 초과 경고 / 처리 직전 재조회 비교. 현재·다음 집회는 기존(신규만) -->
 <!-- [v63] 집회정보 등록·수정 저장 — 연도·월·종류 중복 시 "중복된 내용이 있습니다." 후 저장 안 함, 저장 후 "○년 ○월 ○○ 집회정보가 정상 등록/수정되었습니다." 팝업 확인 시 저장 연도로 하단 목록 조회, 삭제 후 "…삭제되었습니다." 팝업 -->
 <!-- [v62] CSV 일괄등록 완료 후 화면 초기화 제외 — 성공 행은 "등록완료"(초록)로 남기고 파일명·미리보기 유지, 건수 줄에 등록완료·실패 건수 추가, 재검증에서 등록완료 행 제외 -->
 <!-- [v61] 집회정보등록 "등록된 집회 기준" — 화면 로딩 시 조회 제외(안내문구), 조회 버튼 클릭 시 조회, 년도 콤보 기본 현재 연도·변경 시 결과 초기화, 등록·수정·삭제 후 조회 상태면 새로고침, 메뉴 이동 시 초기화 -->
@@ -562,6 +563,14 @@ input.csv-hidden{display:none}
 .csv-preview .cp-day{text-align:center;width:32px;min-width:32px;padding-left:4px;padding-right:4px}
 .csv-preview .cp-res{white-space:nowrap}
 .csv-sum .skip{color:#6b7280}
+/* [v64] 지난 집회 동기화 */
+.tag.t-new{color:#1d4ed8;background:#e0eaff}
+.tag.t-none{color:#6b7280;background:#eef0f3}
+.tag.plain{color:#4b5563;background:transparent;padding:0;font-weight:500}
+.csv-sync-note{margin-top:12px;padding:9px 12px;border-radius:8px;background:#fff7e6;color:#9a5b00;font-size:12.5px;font-weight:600}
+.csv-delchk{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#c0392b;margin:0 0 8px;cursor:pointer}
+.csv-delchk input{width:16px;height:16px}
+.cp-del td,.cp-del sc-raw-td{background:#fdf3f2}
 /* [v58] 구역 정렬 머리글 */
 .sort-th{cursor:pointer;user-select:none;-webkit-user-select:none;white-space:nowrap}
 .sort-th:hover{color:#2f5fd1}
@@ -1065,20 +1074,33 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
             <label class="btn">📄 파일 선택<input class="csv-hidden csv-file-input" type="file" accept=".csv,text/csv" sc-camel-on-change="{{csv.onFile}}"></label>
             <span class="csv-file" title="{{csv.fileLabel}}">{{csv.fileLabel}}</span>
           </div>
+          <!-- [v64] 지난 집회 = 동기화 모드 안내 -->
+          <sc-if value="{{csv.sync}}" hint-placeholder-val="{{false}}">
+            <div class="csv-sync-note">⚠ 지난 집회입니다. 파일 기준으로 신규·수정·삭제가 반영됩니다. (같은 구역·대상자 = 수정, 없으면 신규, 파일에 없는 대상자는 체크 시 삭제)</div>
+          </sc-if>
           <sc-if value="{{csv.hasRows}}" hint-placeholder-val="{{false}}">
+            <sc-if value="{{csv.sync}}" hint-placeholder-val="{{false}}">
+            <div class="csv-sum">미리보기 · 파일 {{csv.total}}건 / <span style="color:#1d4ed8">신규 {{csv.sNew}}</span> · <span style="color:#b06a15">수정 {{csv.sUpd}}</span> · <span class="skip">변경없음 {{csv.sSame}}</span> · <span class="ng">오류 {{csv.sNg}}</span> / <span class="ng">삭제대상 {{csv.sDel}}</span><sc-if value="{{csv.hasSkip}}" hint-placeholder-val="{{false}}"> / <span class="skip">빈 줄 제외 {{csv.skipCount}}건</span></sc-if><sc-if value="{{csv.hasSDone}}" hint-placeholder-val="{{false}}"> / <span class="ok">신규·수정완료 {{csv.sDone}}</span></sc-if><sc-if value="{{csv.hasSDelDone}}" hint-placeholder-val="{{false}}"> / <span class="ok">삭제완료 {{csv.sDelDone}}</span></sc-if><sc-if value="{{csv.hasSFail}}" hint-placeholder-val="{{false}}"> / <span class="ng">실패 {{csv.sFail}}</span></sc-if></div>
+            <sc-if value="{{csv.hasDelTargets}}" hint-placeholder-val="{{false}}">
+              <label class="csv-delchk"><input type="checkbox" checked="{{csv.delChecked}}" sc-camel-on-change="{{csv.toggleDel}}"> 파일에 없는 대상자 삭제 ({{csv.sDel}}건)</label>
+            </sc-if>
+            </sc-if>
+            <sc-if value="{{csv.notSync}}" hint-placeholder-val="{{true}}">
             <div class="csv-sum">미리보기 · 전체 {{csv.total}}건 / <span class="ok">정상 {{csv.okCount}}건</span> / <span class="ng">오류 {{csv.ngCount}}건</span><sc-if value="{{csv.hasSkip}}" hint-placeholder-val="{{false}}"> / <span class="skip">빈 줄 제외 {{csv.skipCount}}건</span></sc-if><sc-if value="{{csv.hasDone}}" hint-placeholder-val="{{false}}"> / <span class="ok">등록완료 {{csv.doneCount}}건</span></sc-if><sc-if value="{{csv.hasFail}}" hint-placeholder-val="{{false}}"> / <span class="ng">실패 {{csv.failCount}}건</span></sc-if></div>
+            </sc-if>
             <div class="csv-preview">
               <sc-raw-table>
                 <!-- [v55] 월~일 7칸 + 구원시인·상담인·비고 -->
                 <sc-raw-thead><sc-raw-tr><sc-raw-th class="cp-stk cp-no">No</sc-raw-th><sc-raw-th class="cp-stk cp-zone sort-th" title="구역 정렬 전환" sc-camel-on-click="{{toggleCsvSort}}">구역<span class="sort-mark">{{csvSortMark}}</span></sc-raw-th><sc-raw-th class="cp-stk cp-leader">인도자</sc-raw-th><sc-raw-th class="cp-stk cp-target">대상자</sc-raw-th><sc-raw-th>관계</sc-raw-th>
                   <sc-raw-th class="cp-day">월</sc-raw-th><sc-raw-th class="cp-day">화</sc-raw-th><sc-raw-th class="cp-day">수</sc-raw-th><sc-raw-th class="cp-day">목</sc-raw-th><sc-raw-th class="cp-day">금</sc-raw-th><sc-raw-th class="cp-day">토</sc-raw-th><sc-raw-th class="cp-day">일</sc-raw-th>
-                  <sc-raw-th class="cp-day">구원시인</sc-raw-th><sc-raw-th>상담인</sc-raw-th><sc-raw-th>비고</sc-raw-th><sc-raw-th>결과</sc-raw-th></sc-raw-tr></sc-raw-thead>
+                  <sc-raw-th class="cp-day">구원시인</sc-raw-th><sc-raw-th>상담인</sc-raw-th><sc-raw-th>비고</sc-raw-th><sc-if value="{{csv.sync}}" hint-placeholder-val="{{false}}"><sc-raw-th>처리구분</sc-raw-th></sc-if><sc-raw-th>결과</sc-raw-th></sc-raw-tr></sc-raw-thead>
                 <sc-raw-tbody>
                   <sc-for list="{{csv.rows}}" as="cr" hint-placeholder-count="3">
-                    <sc-raw-tr>
+                    <sc-raw-tr class="{{cr.rowCls}}">
                       <sc-raw-td class="cp-stk cp-no">{{cr.no}}</sc-raw-td><sc-raw-td class="cp-stk cp-zone">{{cr.zone}}</sc-raw-td><sc-raw-td class="cp-stk cp-leader">{{cr.leader}}</sc-raw-td><sc-raw-td class="cp-stk cp-target">{{cr.target}}</sc-raw-td><sc-raw-td>{{cr.relation}}</sc-raw-td>
                       <sc-for list="{{cr.dayMarks}}" as="dm" hint-placeholder-count="7"><sc-raw-td class="cp-day">{{dm.text}}</sc-raw-td></sc-for>
                       <sc-raw-td class="cp-day">{{cr.savedMark}}</sc-raw-td><sc-raw-td>{{cr.counselor}}</sc-raw-td><sc-raw-td>{{cr.note}}</sc-raw-td>
+                      <sc-if value="{{csv.sync}}" hint-placeholder-val="{{false}}"><sc-raw-td class="cp-res"><span class="tag {{cr.kindCls}}">{{cr.kindText}}</span></sc-raw-td></sc-if>
                       <sc-raw-td class="cp-res"><span class="tag {{cr.tagCls}}">{{cr.result}}</span></sc-raw-td>
                     </sc-raw-tr>
                   </sc-for>
@@ -1088,7 +1110,8 @@ table.pv.pv-sum-tbl thead .pv-gs{border-left:2px solid #4a5a86}
             <div class="form-actions" style="align-items:center">
               <span class="csv-progress">{{csv.progressText}}</span>
               <button class="btn" sc-camel-on-click="{{csv.reset}}">취소</button>
-              <button class="btn primary" sc-camel-on-click="{{csv.register}}">정상 {{csv.okCount}}건 일괄등록</button>
+              <sc-if value="{{csv.notSync}}" hint-placeholder-val="{{true}}"><button class="btn primary" sc-camel-on-click="{{csv.register}}">정상 {{csv.okCount}}건 일괄등록</button></sc-if>
+              <sc-if value="{{csv.sync}}" hint-placeholder-val="{{false}}"><button class="btn primary" sc-camel-on-click="{{csv.register}}">{{csv.syncBtnText}}</button></sc-if>
             </div>
           </sc-if>
         </div>
@@ -1580,6 +1603,12 @@ function csvCell(v) {
 // ===== DB row <-> 화면모델 변환 =====
 function ynToBool(v) { return v === 'Y' || v === true || v === 1 || v === '1'; }
 function boolToYn(v) { return v ? 'Y' : 'N'; }
+// [v64] CSV 행 → 참석기록 데이터(요일·구원시인·상담인·비고) — base에 id 또는 attendee_id
+function csvRecordData(r, base) {
+  var d = r.days || {}, rec = Object.assign({}, base, { gospel_confessor: r.saved ? 'Y' : '', counselor_name: r.counselor || '', note: r.note || '' });
+  DAY_DEFS.forEach(function (x) { rec[x[0] + '_yn'] = d[x[0]] ? 'Y' : 'N'; });
+  return rec;
+}
 function stripUnit(s) { return parseInt(String(s), 10) || 0; } // "2026년" -> 2026, "5일" -> 5
 // [v54] 공통 텍스트 파일 다운로드 — Safari는 blob을 비동기로 읽으므로 URL 해제를 60초 뒤로 미룬다
 function saveTextFile(fileName, text, mime) {
@@ -1808,7 +1837,11 @@ class Component extends DCLogic {
 
       // [v58] 구역 정렬 방향 — "asc" | "desc"
       listSortDir: "asc",
-      csvSortDir: "asc"
+      csvSortDir: "asc",
+
+      // [v64] 지난 집회 동기화 — 삭제 체크, 삭제 처리 결과 { attendeeId: { status, msg, snap } }
+      csvDeleteChecked: false,
+      csvDelResult: {}
     };
     this.loadAll();
   }
@@ -2542,7 +2575,7 @@ class Component extends DCLogic {
   // ── [v35] CSV 일괄등록 ──
   resetCsv() {
     if (this.state.csvBusy) return;
-    this.setState({ csvFileName: "", csvRows: [], csvProgress: "", csvSkipped: 0, csvSortDir: "asc" }); // [v58]
+    this.setState({ csvFileName: "", csvRows: [], csvProgress: "", csvSkipped: 0, csvSortDir: "asc", csvDeleteChecked: false, csvDelResult: {} }); // [v58][v64]
   }
   // [v58] "구역" 머리글 클릭 — 오름/내림 전환 (체크·편집 상태는 id 기준이라 그대로 유지)
   toggleListSort() { this.setState({ listSortDir: this.state.listSortDir === "desc" ? "asc" : "desc" }); }
@@ -2562,7 +2595,7 @@ class Component extends DCLogic {
   }
   // [v59] 파일·미리보기·빈 줄 건수·진행·정렬 초기화 + 파일 선택칸 비움
   clearCsvPreview() {
-    this.setState({ csvFileName: "", csvRows: [], csvProgress: "", csvSkipped: 0, csvSortDir: "asc" });
+    this.setState({ csvFileName: "", csvRows: [], csvProgress: "", csvSkipped: 0, csvSortDir: "asc", csvDeleteChecked: false, csvDelResult: {} }); // [v64]
     if (typeof document !== "undefined") {
       var els = document.querySelectorAll("input.csv-file-input");
       for (var i = 0; i < els.length; i++) els[i].value = "";
@@ -2613,11 +2646,12 @@ class Component extends DCLogic {
           warn: warns.length ? "확인: " + warns.join(", ") + " → 불참 처리" : "", status: "", msg: "" });
       });
       if (!rows.length) { alert("등록할 데이터 행이 없습니다."); return; }
-      self.setState({ csvFileName: file.name, csvProgress: "", csvSkipped: skipped, csvSortDir: "asc", csvRows: self.validateCsvRows(rows) });
+      self.setState({ csvFileName: file.name, csvProgress: "", csvSkipped: skipped, csvSortDir: "asc", csvDeleteChecked: false, csvDelResult: {}, csvRows: self.validateCsvRows(rows) }); // [v64]
     }).catch(function (err) { input.value = ""; alert("파일 읽기 실패: " + ((err && err.message) || err)); });
   }
   // 행별 검증 — 필수값(구역·대상자), DB 중복(선택 집회 기준), 파일 안 중복
   validateCsvRows(rows) {
+    if (this.isCsvSyncMode()) return this.validateCsvRowsSync(rows); // [v64] 지난 집회 = 동기화 분류
     var ctx = this.codeCtx();
     var mt = this.state.meetings.filter(function (m) { return m.id === this.state.csvMeetingId; }, this)[0];
     var key = mt ? ctx.normKey(mt.year, mt.month, mt.kind) : null;
@@ -2640,10 +2674,212 @@ class Component extends DCLogic {
   }
   // 정상 행만 순차 등록 — 실패 시 방금 만든 대상자 행을 되돌리고 다음 행으로 진행
   // [v62] 등록완료 행은 그대로 두고 나머지만 재검증(파일 줄번호 순)
-  revalidateCsvKeepDone(rows) {
-    var done = rows.filter(function (r) { return r.status === "done"; });
-    var rest = this.validateCsvRows(rows.filter(function (r) { return r.status !== "done"; }));
-    return rest.concat(done).sort(function (a, b) { return a.no - b.no; });
+  revalidateCsvKeepDone(rows) { return this.revalidateCsvKeep(rows, { done: true }); }
+  // [v64] 전체 행을 파일 순서대로 다시 검증하고 keep 상태 행만 원래 결과 유지
+  // (완료 행도 검증에 넣어야 뒤쪽 "파일 안 중복" 행이 정상·수정으로 바뀌지 않음)
+  revalidateCsvKeep(rows, keep) {
+    var sorted = rows.slice().sort(function (a, b) { return a.no - b.no; });
+    var again = this.validateCsvRows(sorted);
+    return sorted.map(function (r, i) { return keep[r.status] ? r : again[i]; });
+  }
+
+  // ══════════ [v64] 지난 집회 CSV 동기화 ══════════
+  csvMeeting() { var id = this.state.csvMeetingId; return this.state.meetings.filter(function (m) { return m.id === id; })[0] || null; }
+  isCsvSyncMode() { var mt = this.csvMeeting(); return !!mt && this.isPastMeeting(mt); }
+  // 선택 집회의 DB 행을 "구역|대상자" 키로 묶음
+  csvDbGroups() {
+    var mt = this.csvMeeting(); if (!mt) return { groups: {}, total: 0 };
+    var ctx = this.codeCtx(), key = ctx.normKey(mt.year, mt.month, mt.kind), groups = {}, total = 0;
+    this.state.attendanceRows.forEach(function (a) {
+      if (ctx.normKey(a.meetingYear, a.meetingMonth, a.meetingKind) !== key) return;
+      var k = String(a.zone || "").trim() + "|" + String(a.target || "").trim();
+      (groups[k] = groups[k] || []).push(a); total++;
+    });
+    return { groups: groups, total: total };
+  }
+  // 파일 행과 DB 행의 바뀐 항목 목록
+  csvDiff(r, a) {
+    var out = [], days = [], d = r.days || {}, ad = a.days || {};
+    if ((r.leader || "") !== String(a.leader || "").trim()) out.push("인도자");
+    if ((r.relation || "") !== String(a.relation || "").trim()) out.push("관계");
+    DAY_DEFS.forEach(function (x) { if (!!d[x[0]] !== !!ad[x[0]]) days.push(x[1]); });
+    if (days.length) out.push(days.join("·"));
+    if (!!r.saved !== !!a.saved) out.push("구원시인");
+    if ((r.counselor || "") !== String(a.counselor || "").trim()) out.push("상담인");
+    if ((r.note || "") !== String(a.note || "").trim()) out.push("비고");
+    return out;
+  }
+  // 파일 행 분류 — 신규(new)·수정(upd)·변경없음(same)·오류(ng). kind는 처리 후에도 유지
+  validateCsvRowsSync(rows) {
+    var self = this, groups = this.csvDbGroups().groups, seen = {};
+    return rows.map(function (r) {
+      var o = Object.assign({}, r, { status: "ok", msg: "", kind: "", diff: "", dbTargets: [] });
+      var k = r.zone + "|" + r.target;
+      if (!r.zone && !r.target) { o.status = "ng"; o.kind = "ng"; o.msg = "구역·대상자 없음"; }
+      else if (!r.zone) { o.status = "ng"; o.kind = "ng"; o.msg = "구역 없음"; }
+      else if (!r.target) { o.status = "ng"; o.kind = "ng"; o.msg = "대상자 없음"; }
+      else if (seen[k]) { o.status = "ng"; o.kind = "ng"; o.msg = "파일 안 중복"; }
+      else if (groups[k]) {
+        var diffs = {}, targets = [];
+        groups[k].forEach(function (a) {
+          var df = self.csvDiff(r, a);
+          if (df.length) { targets.push({ attendeeId: a.attendeeId, recordId: a.id }); df.forEach(function (x) { diffs[x] = true; }); }
+        });
+        if (targets.length) { o.status = "upd"; o.kind = "upd"; o.msg = "수정"; o.dbTargets = targets; o.diff = Object.keys(diffs).join("·") + " 변경" + (groups[k].length > 1 ? " (DB " + groups[k].length + "건)" : ""); }
+        else { o.status = "same"; o.kind = "same"; o.msg = "변경없음"; }
+      } else { o.status = "new"; o.kind = "new"; o.msg = "신규"; }
+      if (r.zone && r.target) seen[k] = true;
+      return o;
+    });
+  }
+  // 파일에 없는 DB 대상자 = 삭제대상 행(표시·처리용, state에는 처리 결과만 보관)
+  buildCsvDeleteRows() {
+    if (!this.isCsvSyncMode()) return [];
+    var fileKeys = {}, res = this.state.csvDelResult || {}, checked = this.state.csvDeleteChecked, out = [], inDb = {};
+    this.state.csvRows.forEach(function (r) { if (r.zone && r.target) fileKeys[r.zone + "|" + r.target] = true; });
+    var groups = this.csvDbGroups().groups;
+    Object.keys(groups).forEach(function (k) {
+      if (fileKeys[k]) return;
+      groups[k].forEach(function (a) {
+        inDb[a.attendeeId] = true;
+        var rs = res[a.attendeeId];
+        out.push({ no: "DB", isDel: true, attendeeId: a.attendeeId, zone: a.zone, leader: a.leader, target: a.target, relation: a.relation,
+          days: a.days, saved: a.saved, counselor: a.counselor, note: a.note, kind: "del",
+          status: rs ? rs.status : "del", msg: rs ? rs.msg : (checked ? "파일에 없음 · 삭제" : "파일에 없음 · 체크 시 삭제") });
+      });
+    });
+    // 이미 삭제된 행은 처리 결과 스냅샷으로 표시
+    Object.keys(res).forEach(function (id) {
+      if (res[id].status === "deldone" && !inDb[id] && res[id].snap) out.push(Object.assign({}, res[id].snap, { status: "deldone", msg: "삭제완료" }));
+    });
+    return out;
+  }
+  csvSyncCounts() {
+    var c = { "new": 0, upd: 0, same: 0, ng: 0, done: 0, fail: 0, del: 0, delDone: 0, delFail: 0, valid: 0, dbTotal: this.csvDbGroups().total };
+    this.state.csvRows.forEach(function (r) {
+      if (r.status === "new") c["new"]++; else if (r.status === "upd") c.upd++; else if (r.status === "same") c.same++;
+      else if (r.status === "ng") c.ng++; else if (r.status === "done") c.done++;
+      else if (r.status === "fail") { c.fail++; if (r.kind === "new") c["new"]++; else if (r.kind === "upd") c.upd++; } // 실패 행은 다시 실행 대상
+    });
+    this.buildCsvDeleteRows().forEach(function (r) {
+      if (r.status === "deldone") c.delDone++; else { c.del++; if (r.status === "delfail") c.delFail++; }
+    });
+    c.valid = c["new"] + c.upd + c.same + c.done;
+    return c;
+  }
+  toggleCsvDelete() { if (!this.state.csvBusy) this.setState({ csvDeleteChecked: !this.state.csvDeleteChecked }); }
+  // 신규 1건 — 대상자 add → 참석기록 add (실패 시 대상자 되돌림)
+  csvAddOne(r, yc, mc, kc) {
+    return callGatewayFull('add', 'sac_attendee', {
+      data: { zone_no: r.zone, leader_name: r.leader, target_name: r.target, relation_code: r.relation,
+        meeting_year: yc, meeting_month: mc, meeting_kind: kc }
+    }).then(function (json) {
+      var newId = json && json.id;
+      if (!newId) throw new Error("신규 대상자 id 없음");
+      return callGateway('add', 'sac_attendance_record', { data: csvRecordData(r, { attendee_id: Number(newId) }) })
+        .catch(function (e) {
+          return callGateway('delete', 'sac_attendee', { id: Number(newId) }).catch(function () {}).then(function () { throw e; });
+        });
+    });
+  }
+  // 수정 1건 — 같은 키의 DB 행 모두: 대상자 update → 참석기록 update(없으면 add). 빈 칸도 파일 값으로 덮어씀
+  csvUpdateOne(r) {
+    var chain = Promise.resolve();
+    (r.dbTargets || []).forEach(function (t) {
+      chain = chain.then(function () {
+        return callGateway('update', 'sac_attendee', {
+          data: { id: Number(t.attendeeId), zone_no: r.zone, leader_name: r.leader, target_name: r.target, relation_code: r.relation }
+        });
+      }).then(function () {
+        return t.recordId
+          ? callGateway('update', 'sac_attendance_record', { data: csvRecordData(r, { id: Number(t.recordId) }) })
+          : callGateway('add', 'sac_attendance_record', { data: csvRecordData(r, { attendee_id: Number(t.attendeeId) }) });
+      });
+    });
+    return chain;
+  }
+  csvDeleteOne(attendeeId) { return callGateway('delete', 'sac_attendee', { id: Number(attendeeId) }); }
+
+  // [반영 실행] — 처리 직전 재조회·재분류 → 보호·확인 → 신규 → 수정 → 삭제
+  syncCsv(mt, yc, mc, kc, label) {
+    var self = this;
+    var before = this.csvSyncCounts(), beforeChecked = this.state.csvDeleteChecked;
+    this.setState({ csvBusy: true, csvProgress: "최신 데이터 확인 중…" });
+    this.loadAll().then(function () {
+      var rows = self.revalidateCsvKeepDone(self.state.csvRows);
+      self.setState({ csvRows: rows, csvBusy: false, csvProgress: "" });
+      var c = self.csvSyncCounts();
+      if (c["new"] !== before["new"] || c.upd !== before.upd || c.del !== before.del) {
+        alert("데이터가 변경되어 미리보기를 갱신했습니다. 확인 후 다시 실행하세요."); return;
+      }
+      var doDel = beforeChecked && c.del > 0;
+      if (doDel && c.valid === 0) { doDel = false; alert("파일에 정상 행이 없어 삭제는 하지 않습니다."); }
+      var delN = doDel ? c.del : 0;
+      if (!c["new"] && !c.upd && !delN) { alert("반영할 내용이 없습니다."); return; }
+      if (doDel && c.dbTotal > 0 && delN / c.dbTotal > 0.3) {
+        var pct = Math.round(delN * 100 / c.dbTotal);
+        if (!confirm("⚠ 기존 " + c.dbTotal + "명 중 " + delN + "명(" + pct + "%)이 삭제됩니다.\n다른 집회 파일이거나 일부만 담긴 파일이 아닌지 확인하세요.\n계속하시겠습니까?")) return;
+      }
+      if (!confirm("지난 집회(" + label + ")에 신규 " + c["new"] + " · 수정 " + c.upd + " · 삭제 " + delN + "건을 반영합니다.\n" +
+        "파일 기준으로 반영되며, 참석내역조회에서는 수정·삭제할 수 없습니다. 계속하시겠습니까?")) return;
+      self.runCsvSync(yc, mc, kc, doDel);
+    }, function (e) { self.setState({ csvBusy: false, csvProgress: "" }); alert("조회 실패: " + ((e && e.message) || e)); });
+  }
+  runCsvSync(yc, mc, kc, doDel) {
+    var self = this;
+    var rows = this.state.csvRows;
+    var news = rows.filter(function (r) { return r.status === "new"; });
+    var upds = rows.filter(function (r) { return r.status === "upd"; });
+    var dels = doDel ? this.buildCsvDeleteRows().filter(function (r) { return r.status !== "deldone"; }) : [];
+    var total = news.length + upds.length + dels.length, done = 0;
+    var okNos = {}, failNos = {}, delRes = Object.assign({}, this.state.csvDelResult);
+    var cnt = { "new": 0, upd: 0, del: 0, fail: 0 }, skipDel = false;
+    function tick() { done++; self.setState({ csvProgress: done + " / " + total + " 처리 중…" }); }
+    this.setState({ csvBusy: true, csvProgress: "0 / " + total + " 처리 중…" });
+    var chain = Promise.resolve();
+    news.forEach(function (r) {
+      chain = chain.then(function () {
+        return self.csvAddOne(r, yc, mc, kc).then(function () { okNos[r.no] = "신규완료"; cnt["new"]++; },
+          function (e) { failNos[r.no] = (e && e.message) || String(e); cnt.fail++; });
+      }).then(tick);
+    });
+    upds.forEach(function (r) {
+      chain = chain.then(function () {
+        return self.csvUpdateOne(r).then(function () { okNos[r.no] = "수정완료"; cnt.upd++; },
+          function (e) { failNos[r.no] = (e && e.message) || String(e); cnt.fail++; });
+      }).then(tick);
+    });
+    chain = chain.then(function () {
+      if (!dels.length) return;
+      if (cnt.fail > 0) { // 신규·수정 실패 → 삭제 건너뜀
+        skipDel = true;
+        dels.forEach(function (d) { delRes[d.attendeeId] = { status: "delskip", msg: "삭제 건너뜀(신규·수정 실패)" }; });
+        return;
+      }
+      var dc = Promise.resolve();
+      dels.forEach(function (d) {
+        dc = dc.then(function () {
+          return self.csvDeleteOne(d.attendeeId).then(function () {
+            delRes[d.attendeeId] = { status: "deldone", msg: "삭제완료", snap: Object.assign({}, d) }; cnt.del++;
+          }, function (e) { delRes[d.attendeeId] = { status: "delfail", msg: "실패: " + ((e && e.message) || e) }; cnt.fail++; });
+        }).then(tick);
+      });
+      return dc;
+    });
+    chain.then(function () {
+      var remain = rows.map(function (r) {
+        if (okNos[r.no]) return Object.assign({}, r, { status: "done", msg: okNos[r.no] });
+        return failNos[r.no] ? Object.assign({}, r, { status: "fail", msg: "실패: " + failNos[r.no] }) : r;
+      });
+      var mid = self.state.csvMeetingId;
+      self.setState({ csvBusy: false, csvRows: remain, csvDelResult: delRes, csvProgress: "",
+        listMeetingId: mid, listApplied: mid, listYear: self.yearOfMeeting(mid) });
+      alert("반영 완료 — 신규 " + cnt["new"] + " · 수정 " + cnt.upd + " · 삭제 " + cnt.del + " / 실패 " + cnt.fail +
+        (skipDel ? "\n신규·수정 실패가 있어 삭제는 건너뛰었습니다." : ""));
+      return self.loadAll().then(function () {
+        self.setState({ csvRows: self.revalidateCsvKeep(self.state.csvRows, { done: true, fail: true }) }); // [v64]
+      });
+    });
   }
   bulkRegisterCsv() {
     var self = this;
@@ -2653,6 +2889,10 @@ class Component extends DCLogic {
     var ctx = this.codeCtx();
     var yc = ctx.toCode("year", mt.year), mc = ctx.toCode("month", mt.month), kc = ctx.toCode("kind", mt.kind);
     if (!yc || !mc || !kc) { alert("선택한 집회의 년도·월·종류가 공통코드에 없습니다."); return; }
+    if (this.isCsvSyncMode()) { // [v64] 지난 집회 = 동기화
+      this.syncCsv(mt, yc, mc, kc, withInstructor(ctx.yearLabel(mt.year) + " " + ctx.monthLabel(mt.month) + " " + ctx.kindLabel(mt.kind), mt));
+      return;
+    }
     var rows = this.revalidateCsvKeepDone(this.state.csvRows); // [v62] 등록완료 행은 유지
     var targets = rows.filter(function (r) { return r.status === "ok"; });
     if (!targets.length) { this.setState({ csvRows: rows }); alert("등록할 정상 행이 없습니다."); return; }
@@ -2664,26 +2904,7 @@ class Component extends DCLogic {
 
     var okNos = {}, failNos = {}, done = 0;
     this.setState({ csvBusy: true, csvRows: rows, csvProgress: "0 / " + targets.length + " 등록 중…" });
-    function one(r) {
-      return callGatewayFull('add', 'sac_attendee', {
-        data: { zone_no: r.zone, leader_name: r.leader, target_name: r.target, relation_code: r.relation,
-          meeting_year: yc, meeting_month: mc, meeting_kind: kc }
-      }).then(function (json) {
-        var newId = json && json.id;
-        if (!newId) throw new Error("신규 대상자 id 없음");
-        return callGateway('add', 'sac_attendance_record', {
-          // [v55] 파일의 요일·구원시인·상담인·비고 저장 (예전 4칸 양식이면 요일 N, 나머지 빈 값)
-          data: (function () {
-            var d = r.days || {};
-            var rec = { attendee_id: Number(newId), gospel_confessor: r.saved ? 'Y' : '', counselor_name: r.counselor || '', note: r.note || '' };
-            DAY_DEFS.forEach(function (x) { rec[x[0] + '_yn'] = d[x[0]] ? 'Y' : 'N'; });
-            return rec;
-          })()
-        }).catch(function (e) {
-          return callGateway('delete', 'sac_attendee', { id: Number(newId) }).catch(function () {}).then(function () { throw e; });
-        });
-      });
-    }
+    function one(r) { return self.csvAddOne(r, yc, mc, kc); } // [v64] 공통함수로 분리(동작 동일)
     var chain = Promise.resolve();
     targets.forEach(function (r) {
       chain = chain.then(function () {
@@ -2706,9 +2927,7 @@ class Component extends DCLogic {
       alert("일괄등록 완료 — 성공 " + okN + "건 / 실패 " + failN + "건");
       return self.loadAll().then(function () {
         // 재조회 후 정상·오류 행만 재검증(등록완료·실패 표시는 유지) [v62]
-        var keep = self.state.csvRows.filter(function (r) { return r.status === "fail" || r.status === "done"; });
-        var again = self.validateCsvRows(self.state.csvRows.filter(function (r) { return r.status !== "fail" && r.status !== "done"; }));
-        self.setState({ csvRows: again.concat(keep).sort(function (a, b) { return a.no - b.no; }) });
+        self.setState({ csvRows: self.revalidateCsvKeep(self.state.csvRows, { done: true, fail: true }) }); // [v64]
       });
     });
   }
@@ -3230,7 +3449,7 @@ class Component extends DCLogic {
     // [v25 — 참석자 행 수정] 다른 메뉴로 이동했다가 "참석정보 등록"으로 돌아왔을 때 수정모드가
     // 남아있지 않도록, 메뉴 전환 시 resetForm()을 함께 호출한다.
     var navSubItems = MENU_KEYS.map(function (key) {
-      return { key: key, label: key, cls: key === view ? "active" : "", select: function () { if (self.state.csvBusy) { alert("일괄등록이 진행 중입니다. 완료 후 이동하세요."); return; } if (!self.guardBulk()) return; self.resetForm(); self.resetPivot(); self.resetListMeeting(); self.setState({ attendTab: "single", csvMeetingId: "", csvFileName: "", csvRows: [], csvProgress: "", attendYear: "", csvYear: "", listSortDir: "asc", csvSortDir: "asc", meetingYearFilter: "", meetingYearFilterApplied: "전체", meetingQueried: false, attendForm: Object.assign({}, self.state.attendForm, { meetingId: "" }) }); self.setState({ view: key, expandAttend: true, sidebarOpen: false }); } };
+      return { key: key, label: key, cls: key === view ? "active" : "", select: function () { if (self.state.csvBusy) { alert("일괄등록이 진행 중입니다. 완료 후 이동하세요."); return; } if (!self.guardBulk()) return; self.resetForm(); self.resetPivot(); self.resetListMeeting(); self.setState({ attendTab: "single", csvMeetingId: "", csvFileName: "", csvRows: [], csvProgress: "", attendYear: "", csvYear: "", listSortDir: "asc", csvSortDir: "asc", csvDeleteChecked: false, csvDelResult: {}, meetingYearFilter: "", meetingYearFilterApplied: "전체", meetingQueried: false, attendForm: Object.assign({}, self.state.attendForm, { meetingId: "" }) }); self.setState({ view: key, expandAttend: true, sidebarOpen: false }); } };
     });
 
     var topDefs = [
@@ -3239,7 +3458,7 @@ class Component extends DCLogic {
       { key: "공통코드관리", label: "공통코드관리", icon: "⚙" }
     ];
     var navTopItems = topDefs.map(function (d) {
-      return { key: d.key, label: d.label, icon: d.icon, cls: d.key === view ? "active" : "", select: function () { if (self.state.csvBusy) { alert("일괄등록이 진행 중입니다. 완료 후 이동하세요."); return; } if (!self.guardBulk()) return; self.resetForm(); self.resetPivot(); self.resetListMeeting(); self.setState({ attendTab: "single", csvMeetingId: "", csvFileName: "", csvRows: [], csvProgress: "", attendYear: "", csvYear: "", listSortDir: "asc", csvSortDir: "asc", meetingYearFilter: "", meetingYearFilterApplied: "전체", meetingQueried: false, attendForm: Object.assign({}, self.state.attendForm, { meetingId: "" }) }); self.setState({ view: d.key, sidebarOpen: false }); } };
+      return { key: d.key, label: d.label, icon: d.icon, cls: d.key === view ? "active" : "", select: function () { if (self.state.csvBusy) { alert("일괄등록이 진행 중입니다. 완료 후 이동하세요."); return; } if (!self.guardBulk()) return; self.resetForm(); self.resetPivot(); self.resetListMeeting(); self.setState({ attendTab: "single", csvMeetingId: "", csvFileName: "", csvRows: [], csvProgress: "", attendYear: "", csvYear: "", listSortDir: "asc", csvSortDir: "asc", csvDeleteChecked: false, csvDelResult: {}, meetingYearFilter: "", meetingYearFilterApplied: "전체", meetingQueried: false, attendForm: Object.assign({}, self.state.attendForm, { meetingId: "" }) }); self.setState({ view: d.key, sidebarOpen: false }); } };
     });
 
     // [v18 — 구성 P] 참석정보 등록 화면의 목록 — attendanceRows(=attendee 1행당 1건, 집회 정보는
@@ -3401,6 +3620,31 @@ class Component extends DCLogic {
         var ok = cr.filter(function (r) { return r.status === "ok"; }).length;
         var doneN = cr.filter(function (r) { return r.status === "done"; }).length; // [v62]
         var failN = cr.filter(function (r) { return r.status === "fail"; }).length;
+        // [v64] 지난 집회 동기화 모드
+        var sync = self.isCsvSyncMode(), sc = sync ? self.csvSyncCounts() : null;
+        var KIND_LABEL = { "new": "신규", upd: "수정", same: "변경없음", ng: "오류", del: "삭제대상" };
+        var KIND_CLS = { "new": "t-new", upd: "warn", same: "t-none", ng: "crit", del: "t-none" };
+        function mapRow(r) {
+          var d = r.days || {};
+          var o = { no: String(r.no), zone: r.zone || "-", leader: r.leader || "-", target: r.target || "-", relation: r.relation || "-",
+            dayMarks: DAY_DEFS.map(function (x) { return { text: d[x[0]] ? "O" : "" }; }),
+            savedMark: r.saved ? "O" : "", counselor: r.counselor || "", note: r.note || "", rowCls: r.isDel ? "cp-del" : "" };
+          if (!sync) {
+            o.result = r.status === "ok" && r.warn ? r.msg + " · " + r.warn : r.msg;
+            o.tagCls = (r.status === "ok" || r.status === "done") ? "good" : (r.status === "fail" ? "crit" : "warn"); // [v62] 등록완료 초록
+            return o;
+          }
+          var kind = r.kind || "ng";
+          o.kindText = KIND_LABEL[kind] || "";
+          o.kindCls = kind === "del" && self.state.csvDeleteChecked && r.status === "del" ? "crit" : (KIND_CLS[kind] || "t-none");
+          var detail = r.status === "upd" ? r.diff : (r.status === "new" || r.status === "same" ? "" : r.msg);
+          if (r.status === "done" || r.status === "deldone") { o.result = r.msg; o.tagCls = "good"; }
+          else if (r.status === "fail" || r.status === "delfail") { o.result = r.msg; o.tagCls = "crit"; }
+          else { o.result = [detail, r.warn].filter(Boolean).join(" · "); o.tagCls = "plain"; }
+          return o;
+        }
+        var delRows = sync ? self.buildCsvDeleteRows() : [];
+        var sortFn = function (a, b) { return sortRowsByZone(a, b, self.state.csvSortDir); };
         return {
           meetingId: self.state.csvMeetingId,
           setMeetingId: function (e) { self.setCsvMeeting(e && e.target ? e.target.value : e); },
@@ -3413,14 +3657,17 @@ class Component extends DCLogic {
           hasDone: doneN > 0, doneCount: doneN, hasFail: failN > 0, failCount: failN, // [v62]
           hasSkip: (self.state.csvSkipped || 0) > 0, skipCount: self.state.csvSkipped || 0, // [v55]
           progressText: self.state.csvProgress,
-          rows: cr.slice().sort(function (a, b) { return sortRowsByZone(a, b, self.state.csvSortDir); }).map(function (r) { // [v58] 표시용 복사본만 정렬, No 유지
-            var d = r.days || {};
-            return { no: String(r.no), zone: r.zone || "-", leader: r.leader || "-", target: r.target || "-", relation: r.relation || "-",
-              dayMarks: DAY_DEFS.map(function (x) { return { text: d[x[0]] ? "O" : "" }; }), // [v55] 판정 결과를 O로 통일
-              savedMark: r.saved ? "O" : "", counselor: r.counselor || "", note: r.note || "",
-              result: r.status === "ok" && r.warn ? r.msg + " · " + r.warn : r.msg,
-              tagCls: (r.status === "ok" || r.status === "done") ? "good" : (r.status === "fail" ? "crit" : "warn") }; // [v62] 등록완료 초록
-          }),
+          // [v58] 표시용 복사본만 정렬, No 유지 / [v64] 삭제대상(DB) 행은 파일 행 뒤에 구역순
+          rows: cr.slice().sort(sortFn).map(mapRow).concat(delRows.slice().sort(sortFn).map(mapRow)),
+          // [v64] 동기화 모드 표시값
+          sync: sync, notSync: !sync,
+          hasRowsOrDel: cr.length > 0,
+          sNew: sc ? sc["new"] : 0, sUpd: sc ? sc.upd : 0, sSame: sc ? sc.same : 0, sNg: sc ? sc.ng : 0, sDel: sc ? sc.del : 0,
+          sDone: sc ? sc.done : 0, hasSDone: !!(sc && sc.done), sDelDone: sc ? sc.delDone : 0, hasSDelDone: !!(sc && sc.delDone),
+          sFail: sc ? sc.fail + sc.delFail : 0, hasSFail: !!(sc && (sc.fail + sc.delFail)),
+          delChecked: self.state.csvDeleteChecked, hasDelTargets: !!(sc && sc.del),
+          toggleDel: function () { self.toggleCsvDelete(); },
+          syncBtnText: sc ? "반영 실행 (신규 " + sc["new"] + " · 수정 " + sc.upd + " · 삭제 " + (self.state.csvDeleteChecked ? sc.del : 0) + ")" : "",
           reset: function () { self.resetCsv(); },
           register: function () { self.bulkRegisterCsv(); }
         };
